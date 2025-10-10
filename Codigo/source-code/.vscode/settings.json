@@ -1,0 +1,19 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "idf.espIdfPath": "c:\\Users\\infin\\.espressif\\esp-idf",
+  "idf.espIdfPathWin": "c:\\Users\\infin\\.espressif\\esp-idf",
+  "idf.pythonInstallPath": "c:\\Users\\infin\\.espressif\\tools-idf\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.openOcdConfigs": [
+    "board/esp32-wrover-kit-3.3v.cfg"
+  ],
+  "idf.toolsPathWin": "c:\\Users\\infin\\.espressif\\tools-idf",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32"
+  },
+  "clangd.path": "c:\\Users\\infin\\.espressif\\tools-idf\\tools\\esp-clang\\esp-19.1.2_20250312\\esp-clang\\bin\\clangd.exe",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=c:\\Users\\infin\\.espressif\\tools-idf\\tools\\xtensa-esp-elf\\esp-15.2.0_20250920\\xtensa-esp-elf\\bin\\xtensa-esp32-elf-gcc.exe",
+    "--compile-commands-dir=${workspaceFolder}\\build"
+  ]
+}
