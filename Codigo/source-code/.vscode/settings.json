@@ -15,5 +15,9 @@
     "--background-index",
     "--query-driver=c:\\Users\\infin\\.espressif\\tools-idf\\tools\\xtensa-esp-elf\\esp-15.2.0_20250920\\xtensa-esp-elf\\bin\\xtensa-esp32-elf-gcc.exe",
     "--compile-commands-dir=${workspaceFolder}\\build"
-  ]
+  ],
+  "files.associations": {
+    "esp_log.h": "c",
+    "esp_err.h": "c"
+  }
 }

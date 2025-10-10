@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include "i2c.h"
 #include "mpu6050.h"
 
-void app_main(void)
+void func(void)
 {
 
 }
