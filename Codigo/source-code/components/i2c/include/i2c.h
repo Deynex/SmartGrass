@@ -1,10 +1,10 @@
 #include "driver/i2c_master.h"
 
 // Bus I2C
-#define I2C_MASTER_SCL_IO 22        // Número de GPIO utilizado para el reloj maestro I2C
-#define I2C_MASTER_SDA_IO 21        // Número de GPIO utilizado para los datos maestros I2C
-#define I2C_MASTER_NUM I2C_NUM_0    // Número de puerto I2C para el dispositivo maestro
-#define I2C_MASTER_TIMEOUT_MS 300   // Tiempo de espera del I2C en milisegundos
+#define I2C_MASTER_SCL 22         // Número de GPIO utilizado para el reloj maestro I2C
+#define I2C_MASTER_SDA 21         // Número de GPIO utilizado para los datos maestros I2C
+#define I2C_MASTER_NUM I2C_NUM_0  // Número de puerto I2C para el dispositivo maestro
+#define I2C_MASTER_TIMEOUT_MS 500 // Tiempo de espera del I2C en milisegundos
 
 /**
  * @brief Inicialización del I2C maestro
