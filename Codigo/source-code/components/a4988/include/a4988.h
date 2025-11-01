@@ -6,11 +6,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-// Ajusta estos pines según tu conexión ESP32 <-> A4988
-#define A4988_STEP_PIN GPIO_NUM_19  // Pin STEP del A4988
-#define A4988_DIR_PIN GPIO_NUM_18   // Pin DIR del A4988
-#define A4988_ENABLE_PIN GPIO_NUM_5 // Pin ENABLE del A4988 (opcional, usa -1 si no lo usas)
-
 // Configuración PWM
 #define A4988_TIMER LEDC_TIMER_0
 #define A4988_CHANNEL LEDC_CHANNEL_0
@@ -22,31 +17,33 @@
 
 // Velocidades en Hz (pasos por segundo)
 // Equivalentes aproximados a las velocidades anteriores
-#define SPEED_SLOW 500       // ~500 pasos/seg (equivalente a 2000μs = 0.5ms delay)
-#define SPEED_MEDIUM 1000    // ~1000 pasos/seg (equivalente a 1000μs = 1ms delay)
-#define SPEED_FAST 2000      // ~2000 pasos/seg (equivalente a 500μs = 0.5ms delay)
-
+#define SPEED_SLOW 500    // ~500 pasos/seg (equivalente a 2000μs = 0.5ms delay)
+#define SPEED_MEDIUM 1000 // ~1000 pasos/seg (equivalente a 1000μs = 1ms delay)
+#define SPEED_FAST 2000   // ~2000 pasos/seg (equivalente a 500μs = 0.5ms delay)
 
 /**
- * @brief Estructura de configuración del driver A4988
+ * @brief Estructura de configuración para el driver dual (vehículo)
+ * Controla múltiples motores con STEP y ENABLE compartidos, pero DIR independientes
  */
 typedef struct
 {
-    gpio_num_t step_pin;        // Pin STEP (pulsos)
-    gpio_num_t dir_pin;         // Pin DIR (dirección)
-    gpio_num_t enable_pin;      // Pin ENABLE (habilitación, opcional, usar -1 si no se usa)
-    uint32_t steps_per_rev;     // Pasos por revolución (típicamente 200 para motor 1.8°)
-    ledc_timer_t timer_num;     // Timer LEDC a usar (LEDC_TIMER_0, LEDC_TIMER_1, etc.)
-    ledc_channel_t channel_num; // Canal LEDC a usar (LEDC_CHANNEL_0, LEDC_CHANNEL_1, etc.)
-} a4988_config_t;
+    gpio_num_t step_pin;        // Pin STEP compartido para todos los motores
+    gpio_num_t dir_pin_left;    // Pin DIR para motores del lado izquierdo
+    gpio_num_t dir_pin_right;   // Pin DIR para motores del lado derecho
+    gpio_num_t enable_pin;      // Pin ENABLE compartido (opcional, usar -1 si no se usa)
+    uint32_t steps_per_rev;     // Pasos por revolución
+    ledc_timer_t timer_num;     // Timer LEDC a usar
+    ledc_channel_t channel_num; // Canal LEDC a usar
+} a4988_dual_config_t;
 
 /**
- * @brief Handle del motor A4988
+ * @brief Handle del driver dual (vehículo)
  */
 typedef struct
 {
     gpio_num_t step_pin;
-    gpio_num_t dir_pin;
+    gpio_num_t dir_pin_left;
+    gpio_num_t dir_pin_right;
     gpio_num_t enable_pin;
     uint32_t steps_per_rev;
     ledc_timer_t timer_num;
@@ -54,7 +51,7 @@ typedef struct
     uint32_t current_frequency; // Frecuencia actual en Hz
     bool enabled;
     volatile bool running; // Flag para controlar la rotación continua
-} a4988_handle_t;
+} a4988_dual_handle_t;
 
 /**
  * @brief Dirección del motor
@@ -66,121 +63,75 @@ typedef enum
 } a4988_direction_t;
 
 /**
- * @brief Inicializa el driver A4988
+ * @brief Dirección del vehículo (modo dual)
+ */
+typedef enum
+{
+    A4988_DUAL_FORWARD = 0,  // Avanzar (ambos lados hacia adelante)
+    A4988_DUAL_BACKWARD = 1, // Retroceder (ambos lados hacia atrás)
+    A4988_DUAL_LEFT = 2,     // Girar a la izquierda (izq atrás, der adelante)
+    A4988_DUAL_RIGHT = 3,    // Girar a la derecha (izq adelante, der atrás)
+    A4988_DUAL_STOP = 4      // Detener
+} a4988_dual_direction_t;
+
+/**
+ * @brief Inicializa el driver dual A4988 para vehículo
  *
- * @param config Configuración del driver
+ * @param config Configuración del driver dual
  * @param handle Puntero al handle que se creará
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_init(const a4988_config_t *config, a4988_handle_t **handle);
+esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t **handle);
 
 /**
- * @brief Habilita el motor
+ * @brief Habilita los motores del vehículo
  *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_enable(a4988_handle_t *handle);
+esp_err_t a4988_dual_enable(a4988_dual_handle_t *handle);
 
 /**
- * @brief Deshabilita el motor
+ * @brief Deshabilita los motores del vehículo
  *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_disable(a4988_handle_t *handle);
+esp_err_t a4988_dual_disable(a4988_dual_handle_t *handle);
 
 /**
- * @brief Establece la dirección del motor
+ * @brief Establece la velocidad del vehículo en RPM
  *
- * @param handle Handle del motor
- * @param direction Dirección (CW o CCW)
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_set_direction(a4988_handle_t *handle, a4988_direction_t direction);
-
-/**
- * @brief Establece la velocidad del motor (frecuencia de pulsos en Hz)
- *
- * @param handle Handle del motor
- * @param frequency_hz Frecuencia en Hz (pasos por segundo)
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_set_speed(a4988_handle_t *handle, uint32_t frequency_hz);
-
-/**
- * @brief Establece la velocidad angular del motor en RPM (revoluciones por minuto)
- *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
  * @param rpm Velocidad en revoluciones por minuto
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_set_angular_speed(a4988_handle_t *handle, float rpm);
+esp_err_t a4988_dual_set_speed(a4988_dual_handle_t *handle, float rpm);
 
 /**
- * @brief Mueve el motor un número específico de pasos
+ * @brief Mueve el vehículo en una dirección específica de forma continua
  *
- * @param handle Handle del motor
- * @param steps Número de pasos a mover
- * @param direction Dirección del movimiento
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_step(a4988_handle_t *handle, uint32_t steps, a4988_direction_t direction);
-
-/**
- * @brief Rota el motor un número específico de grados
- *
- * @param handle Handle del motor
- * @param degrees Grados a rotar
- * @param direction Dirección del movimiento
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_rotate_degrees(a4988_handle_t *handle, float degrees, a4988_direction_t direction);
-
-/**
- * @brief Rota el motor un número específico de revoluciones
- *
- * @param handle Handle del motor
- * @param revolutions Número de revoluciones
- * @param direction Dirección del movimiento
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_rotate_revolutions(a4988_handle_t *handle, float revolutions, a4988_direction_t direction);
-
-/**
- * @brief Obtiene la velocidad angular actual del motor en RPM
- *
- * @param handle Handle del motor
- * @param rpm Puntero donde se guardará el valor de RPM
- * @return esp_err_t ESP_OK si tiene éxito
- */
-esp_err_t a4988_get_angular_speed(a4988_handle_t *handle, float *rpm);
-
-/**
- * @brief Inicia la rotación continua del motor a una velocidad específica en RPM
- * Esta función inicia una tarea en segundo plano que mantiene el motor girando
- *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
+ * @param direction Dirección del movimiento (FORWARD, BACKWARD, LEFT, RIGHT)
  * @param rpm Velocidad en revoluciones por minuto
- * @param direction Dirección de rotación (CW o CCW)
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_run_continuous(a4988_handle_t *handle, float rpm, a4988_direction_t direction);
+esp_err_t a4988_dual_move(a4988_dual_handle_t *handle, a4988_dual_direction_t direction, float rpm);
 
 /**
- * @brief Detiene inmediatamente la rotación continua del motor (Emergency Stop)
+ * @brief Detiene el vehículo inmediatamente
  *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_stop(a4988_handle_t *handle);
+esp_err_t a4988_dual_stop(a4988_dual_handle_t *handle);
 
 /**
- * @brief Libera los recursos del driver
+ * @brief Libera los recursos del driver dual
  *
- * @param handle Handle del motor
+ * @param handle Handle del driver dual
  * @return esp_err_t ESP_OK si tiene éxito
  */
-esp_err_t a4988_free(a4988_handle_t *handle);
+esp_err_t a4988_dual_free(a4988_dual_handle_t *handle);
 
 #endif // A4988_H
