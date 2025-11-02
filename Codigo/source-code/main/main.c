@@ -67,7 +67,7 @@ void motors(void *pvParameters)
     while (true)
     {
         // Avanzar
-        a4988_dual_move(vehicle_handle, A4988_DUAL_FORWARD, 10.0);
+        a4988_dual_move(vehicle_handle, A4988_DUAL_FORWARD, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000)); 
 
         // Detener
@@ -75,7 +75,7 @@ void motors(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Retroceder
-        a4988_dual_move(vehicle_handle, A4988_DUAL_BACKWARD, 20.0);
+        a4988_dual_move(vehicle_handle, A4988_DUAL_BACKWARD, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Apagar motores
@@ -87,7 +87,7 @@ void motors(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         // Girar a la izquierda
-        a4988_dual_move(vehicle_handle, A4988_DUAL_LEFT, 30.0);
+        a4988_dual_move(vehicle_handle, A4988_DUAL_LEFT, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener
@@ -95,7 +95,7 @@ void motors(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Girar a la derecha
-        a4988_dual_move(vehicle_handle, A4988_DUAL_RIGHT, 40.0);
+        a4988_dual_move(vehicle_handle, A4988_DUAL_RIGHT, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener y pausa larga

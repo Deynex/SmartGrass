@@ -9,8 +9,8 @@ static const char *TAG = "A4988";
 // Configuración PWM
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Resolución de 13 bits
-#define LEDC_DUTY 4096                  // Duty cycle 50% (2^13 / 2)
-#define LEDC_MAX_FREQ 4000             // Frecuencia máxima en Hz
+#define LEDC_DUTY 700                   // Duty cycle (0-8191 para 13 bits)
+#define LEDC_MAX_FREQ 4000              // Frecuencia máxima en Hz
 
 esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t **handle)
 {
@@ -194,7 +194,6 @@ esp_err_t a4988_dual_move(a4988_dual_handle_t *handle, a4988_dual_direction_t di
     if (handle->running)
     {
         a4988_dual_stop(handle);
-        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
     // Si la dirección es STOP, solo detener
