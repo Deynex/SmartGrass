@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "i2c.h"
+#include "ap.h"
 #include "mpu6050.h"
 #include "a4988.h"
 #include "esp_timer.h"
@@ -13,7 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Pines para el driver dual (4 motores: 2 izquierda, 2 derecha)
 #define VEHICLE_STEP_PIN GPIO_NUM_19  // STEP compartido para los 4 motores
-#define VEHICLE_DIR_LEFT GPIO_NUM_32  // DIR para motores izquierdos
+#define VEHICLE_DIR_LEFT GPIO_NUM_4   // DIR para motores izquierdos
 #define VEHICLE_DIR_RIGHT GPIO_NUM_18 // DIR para motores derechos
 #define VEHICLE_ENABLE_PIN GPIO_NUM_5 // ENABLE compartido para los 4 motores
 
@@ -68,7 +69,7 @@ void motors(void *pvParameters)
     {
         // Avanzar
         a4988_dual_move(vehicle_handle, A4988_DUAL_FORWARD, 180.0);
-        vTaskDelay(pdMS_TO_TICKS(5000)); 
+        vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener
         a4988_dual_stop(vehicle_handle);
@@ -148,6 +149,10 @@ void app_main(void)
 
     // Configuración del rango del giroscopio
     mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
+
+    // Inicializar NVS, WiFi y servidor HTTP
+    nvs_init();
+    wifi_init();
 
     // Inicialización de los motores del vehículo
     vehicle_init();
