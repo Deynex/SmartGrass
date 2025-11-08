@@ -166,6 +166,6 @@ void app_main(void)
         return;
     }
 
-    xTaskCreatePinnedToCore(control, "control", 4096, NULL, 10, NULL, 0);
-    xTaskCreatePinnedToCore(motors, "motors", 4096, NULL, 10, NULL, 1);
+    xTaskCreatePinnedToCore(control, "control", 4096, NULL, 10, NULL, PRO_CPU_NUM); // Core 0: Control
+    xTaskCreatePinnedToCore(motors, "motors", 4096, NULL, 10, NULL, APP_CPU_NUM);   // Core 1: Motors
 }
