@@ -3,8 +3,6 @@
 
 #include "driver/gpio.h"
 #include "driver/ledc.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 // Configuración PWM
 #define A4988_TIMER LEDC_TIMER_0

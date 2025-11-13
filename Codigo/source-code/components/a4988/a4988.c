@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "a4988.h"
+#include "freertos/FreeRTOS.h"
 #include "esp_log.h"
 #include "esp_err.h"
 

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "i2c.h"
-#include "ap.h"
 #include "mpu6050.h"
 #include "a4988.h"
 #include "esp_timer.h"
@@ -8,6 +7,8 @@
 #include "esp_log.h"
 #include "driver/ledc.h"
 #include "driver/gpio.h"
+#include "uart.h"
+#include "mks_servo42c.h"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
@@ -151,8 +152,8 @@ void app_main(void)
     mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
 
     // Inicializar NVS, WiFi y servidor HTTP
-    nvs_init();
-    wifi_init();
+    //nvs_init();
+    //wifi_init();
 
     // Inicialización de los motores del vehículo
     vehicle_init();
