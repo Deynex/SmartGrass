@@ -152,6 +152,12 @@ void app_main(void)
     // Configuración del rango del giroscopio
     mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
 
+    // Inicialización del UART
+    uart_init();
+
+    // Inicialización del MKS SERVO42C
+    mks_init();
+
     // Inicializar NVS, WiFi y servidor HTTP
     nvs_init();
     wifi_init();
