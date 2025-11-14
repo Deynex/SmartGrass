@@ -5,5 +5,6 @@ idf_component_register(SRCS "main.c"
                         i2c
                         mks_servo42c
                         mpu6050
+                        soft_ap
                         uart
                     INCLUDE_DIRS ".")
