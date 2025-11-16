@@ -189,7 +189,7 @@ static void encoder_task(void *arg)
         int32_t pulse_drift = 0;
         if (mks_read_pulses_received(&pulse_drift))
         {
-            ESP_LOGI("movement_task", "Fin de ciclo. Desfase de pulsos: %" PRId32, pulse_drift);
+            ESP_LOGI("encoder_task", "Fin de ciclo. Desfase de pulsos: %" PRId32, pulse_drift);
 
             if (pulse_drift != 0)
             {
@@ -201,27 +201,27 @@ static void encoder_task(void *arg)
                 // El comando de pulsos espera un valor positivo
                 uint32_t pulses_to_fix = (pulse_drift > 0) ? pulse_drift : -pulse_drift;
 
-                ESP_LOGI("movement_task", "Corrigiendo desfase... Moviendo %" PRIu32 " pulsos en dirección %d", pulses_to_fix, dir);
+                ESP_LOGI("encoder_task", "Corrigiendo desfase... Moviendo %" PRIu32 " pulsos en dirección %d", pulses_to_fix, dir);
 
                 // Usamos la nueva función de movimiento relativo
                 // Usamos una velocidad baja (ej. 10 RPM) para una corrección precisa
                 if (mks_move_relative_pulses(dir, 10, pulses_to_fix))
                 {
-                    ESP_LOGI("movement_task", "Corrección completada. Pulsos deberían ser 0.");
+                    ESP_LOGI("encoder_task", "Corrección completada. Pulsos deberían ser 0.");
                 }
                 else
                 {
-                    ESP_LOGE("movement_task", "¡Fallo al corregir el desfase!");
+                    ESP_LOGE("encoder_task", "¡Fallo al corregir el desfase!");
                 }
             }
         }
         else
         {
-            ESP_LOGE("movement_task", "No se pudo leer el desfase de pulsos.");
+            ESP_LOGE("encoder_task", "No se pudo leer el desfase de pulsos.");
         }
 
         // Espera larga antes de iniciar el próximo ciclo
-        ESP_LOGI("movement_task", "Iniciando nuevo ciclo en 10 segundos...");
+        ESP_LOGI("encoder_task", "Iniciando nuevo ciclo en 10 segundos...");
         vTaskDelay(pdMS_TO_TICKS(10000));
         // --- FIN DEL PASO DE CORRECCIÓN ---
     }
