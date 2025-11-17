@@ -40,14 +40,14 @@ esp_err_t mpu6050_init(i2c_master_dev_handle_t mpu6050_handle)
         return err;
     }
 
-    // El MPU-6050 siempre devuelve 0x68
-    if (data != 0x68)
+    // Comprobar si es un MPU-6500 (o 9250)
+    if (data != 0x70) 
     {
-        ESP_LOGE(TAG, "WHO_AM_I incorrecto. Se esperaba 0x68 pero se recibió 0x%02X", data);
-        return ESP_FAIL; // El dispositivo no es un MPU-6050
+        ESP_LOGE(TAG, "WHO_AM_I incorrecto. Se esperaba 0x70 (MPU-6500) pero se recibió 0x%02X", data);
+        return ESP_FAIL; 
     }
 
-    ESP_LOGI(TAG, "MPU-6050 encontrado (WHO_AM_I = 0x%02X)", data);
+    ESP_LOGI(TAG, "MPU-6500 encontrado (WHO_AM_I = 0x%02X)", data);
     return ESP_OK;
 }
 
