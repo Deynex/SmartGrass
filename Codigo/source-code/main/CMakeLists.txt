@@ -7,4 +7,5 @@ idf_component_register(SRCS "main.c"
                         mpu6050
                         soft_ap
                         uart
+                        vehicle
                     INCLUDE_DIRS ".")

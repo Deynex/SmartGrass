@@ -10,6 +10,7 @@
 #include "uart.h"
 #include "mks_servo42c.h"
 #include "soft_ap.h"
+#include "vehicle.h"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
@@ -43,12 +44,12 @@ i2c_master_dev_handle_t mpu6050_handle; // Manejador del dispositivo MPU6050
 int16_t accel_x_raw, accel_y_raw, accel_z_raw;
 int16_t temp_raw;
 int16_t gyro_x_raw, gyro_y_raw, gyro_z_raw;
-int64_t start_time, end_time;              // Variables para medir el tiempo de ejecución
-a4988_dual_handle_t vehicle_handle = NULL; // Manejador del driver dual para el vehículo
-mks_encoder_data_t enc_data;               // Datos del encoder
-mks_status_t status;                       // Estado del motor
-int32_t pulses_received;                   // Pulsos recibidos del encoder
-float shaft_error;                         // Error angular del eje
+int64_t start_time, end_time;           // Variables para medir el tiempo de ejecución
+vehicle_handle_t vehicle_handle = NULL; // Handle del vehículo
+mks_encoder_data_t enc_data;            // Datos del encoder
+mks_status_t status;                    // Estado del motor
+int32_t pulses_received;                // Pulsos recibidos del encoder
+float shaft_error;                      // Error angular del eje
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Core 0: Control
@@ -96,39 +97,39 @@ void motors(void *pvParameters)
     while (true)
     {
         // Avanzar
-        a4988_dual_move(vehicle_handle, A4988_DUAL_FORWARD, 180.0);
+        vehicle_move(vehicle_handle, A4988_DUAL_FORWARD, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener
-        a4988_dual_stop(vehicle_handle);
+        vehicle_stop(vehicle_handle);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Retroceder
-        a4988_dual_move(vehicle_handle, A4988_DUAL_BACKWARD, 180.0);
+        vehicle_move(vehicle_handle, A4988_DUAL_BACKWARD, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Apagar motores
-        a4988_dual_disable(vehicle_handle);
+        vehicle_disable(vehicle_handle);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Encender motores
-        a4988_dual_enable(vehicle_handle);
+        vehicle_enable(vehicle_handle);
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         // Girar a la izquierda
-        a4988_dual_move(vehicle_handle, A4988_DUAL_LEFT, 180.0);
+        vehicle_move(vehicle_handle, A4988_DUAL_LEFT, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener
-        a4988_dual_stop(vehicle_handle);
+        vehicle_stop(vehicle_handle);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Girar a la derecha
-        a4988_dual_move(vehicle_handle, A4988_DUAL_RIGHT, 180.0);
+        vehicle_move(vehicle_handle, A4988_DUAL_RIGHT, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
 
         // Detener y pausa larga
-        a4988_dual_stop(vehicle_handle);
+        vehicle_stop(vehicle_handle);
         vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
@@ -241,30 +242,7 @@ static void encoder_task(void *arg)
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Funciones
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-static void vehicle_init(void)
-{
-    // Configuración del driver dual para el vehículo (4 motores)
-    a4988_dual_config_t vehicle_config = {
-        .step_pin = VEHICLE_STEP_PIN,
-        .dir_left_pin = VEHICLE_DIR_LEFT,
-        .dir_right_pin = VEHICLE_DIR_RIGHT,
-        .enable_pin = VEHICLE_ENABLE_PIN,
-        .steps_per_rev = VEHICLE_TOTAL_STEPS,
-        .timer_num = VEHICLE_LEDC_TIMER,
-        .channel_num = VEHICLE_LEDC_CHANNEL,
-    };
 
-    // Inicializar el driver dual
-    esp_err_t ret = a4988_dual_init(&vehicle_config, &vehicle_handle);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "¡Falló la inicialización del A4988!");
-        return;
-    }
-
-    // Habilitar los motores
-    a4988_dual_enable(vehicle_handle);
-}
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Main
@@ -323,8 +301,33 @@ void app_main(void)
     nvs_init();
     wifi_init();
 
-    // Inicialización de los motores del vehículo
-    vehicle_init();
+    ESP_LOGI(TAG, "Inicializando componente de vehículo...");
+
+    // 1. Definir la configuración para el subsistema de steppers
+    a4988_dual_config_t stepper_config = {
+        .step_pin = VEHICLE_STEP_PIN,
+        .dir_left_pin = VEHICLE_DIR_LEFT,
+        .dir_right_pin = VEHICLE_DIR_RIGHT,
+        .enable_pin = VEHICLE_ENABLE_PIN,
+        .steps_per_rev = VEHICLE_TOTAL_STEPS,
+        .timer_num = VEHICLE_LEDC_TIMER,
+        .channel_num = VEHICLE_LEDC_CHANNEL,
+    };
+
+    // 2. Envolverla en la configuración principal del vehículo
+    vehicle_config_t vehicle_config = {
+        .stepper_config = stepper_config};
+
+    // 3. Inicializar el componente de vehículo
+    ret = vehicle_init(&vehicle_config, &vehicle_handle);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "¡Falló la inicialización del componente de vehículo!");
+        return;
+    }
+
+    // 4. Habilitar los motores
+    vehicle_enable(vehicle_handle);
 
     // Calibrar encoder al inicio
     if (!mks_calibrate_encoder())
@@ -338,5 +341,5 @@ void app_main(void)
 
     xTaskCreatePinnedToCore(control, "control", 4096, NULL, configMAX_PRIORITIES - 1, NULL, PRO_CPU_NUM);           // Core 0: Control
     xTaskCreatePinnedToCore(motors, "motors", 4096, NULL, configMAX_PRIORITIES - 1, NULL, APP_CPU_NUM);             // Core 1: Motors
-    xTaskCreatePinnedToCore(encoder_task, "encoder_task", 4096, NULL, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM); // Core 1: Encoder
+    //xTaskCreatePinnedToCore(encoder_task, "encoder_task", 4096, NULL, configMAX_PRIORITIES - 2, NULL, APP_CPU_NUM); // Core 1: Encoder
 }
