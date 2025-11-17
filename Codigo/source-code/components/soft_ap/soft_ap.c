@@ -4,6 +4,7 @@
  *
  * Este archivo contiene la implementación completa del WiFi en modo punto de acceso,
  * incluyendo configuración de red, manejo de eventos y gestión de clientes.
+ * @author DEYNEX
  */
 
 #include <string.h>
@@ -18,7 +19,7 @@
 #include "lwip/sys.h"
 
 /* ========================================================================
- * DEFINICIONES Y CONFIGURACIONES
+ * MARK: DEFINICIONES
  * ======================================================================== */
 
 /** @brief SSID del punto de acceso WiFi */
@@ -60,7 +61,7 @@ static const char *TAG = "WIFI_SOFTAP";
 static uint8_t s_connected_stations = 0;
 
 /* ========================================================================
- * MANEJADOR DE EVENTOS WIFI
+ * MARK: EVENTOS WIFI
  * ======================================================================== */
 
 /**
@@ -213,7 +214,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 }
 
 /* ========================================================================
- * FUNCIONES DE CONFIGURACIÓN INTERNA
+ * MARK: CONFIGURACIÓN
  * ======================================================================== */
 
 /**
@@ -334,7 +335,7 @@ static void wifi_ap_start(void)
 }
 
 /* ========================================================================
- * FUNCIONES PÚBLICAS
+ * MARK: FUNCIONES
  * ======================================================================== */
 
 esp_err_t nvs_init(void)

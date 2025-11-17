@@ -1,3 +1,9 @@
+/**
+ * @file a4988.c
+ * @brief Implementación del driver A4988 en ESP32
+ * @author DEYNEX
+ */
+
 #include "a4988.h"
 #include <stdio.h>
 #include <stdlib.h>

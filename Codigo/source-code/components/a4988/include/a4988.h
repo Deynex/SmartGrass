@@ -1,3 +1,9 @@
+/**
+ * @file a4988.h
+ * @brief API para el driver A4988 en ESP32
+ * @author DEYNEX
+ */
+
 #ifndef A4988_H
 #define A4988_H
 

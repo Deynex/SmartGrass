@@ -4,6 +4,7 @@
  * 
  * Este archivo proporciona las funciones necesarias para inicializar y configurar
  * el ESP32 como un punto de acceso WiFi (SoftAP).
+ * @author DEYNEX
  */
 
 #ifndef SOFT_AP_H

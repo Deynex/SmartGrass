@@ -307,7 +307,7 @@ void app_main(void)
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "¡Falló la inicialización de I2C/MPU6050!");
-        return; // Detiene app_main si falló
+        return; // Detiene app_main
     }
 
     ESP_LOGI(TAG, "I2C y MPU6050 inicializados correctamente.");

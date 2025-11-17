@@ -5,6 +5,7 @@
  * Este archivo contiene las funciones auxiliares para simplificar el uso
  * del bus I2C en modo maestro del ESP32, incluyendo inicialización del bus,
  * gestión de dispositivos, y operaciones de lectura/escritura de registros.
+ * @author DEYNEX
  */
 
 #include "i2c.h"

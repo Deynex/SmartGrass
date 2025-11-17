@@ -1,3 +1,9 @@
+/**
+ * @file mpu6050.c
+ * @brief Implementación de la API de alto nivel para el sensor MPU6050 en ESP32
+ * @author DEYNEX
+ */
+
 #include "mpu6050.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"

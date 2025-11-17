@@ -1,3 +1,9 @@
+/**
+ * @file mks_servo42c.h
+ * @brief API para control del servo motor MKS SERVO42C con encoder absoluto
+ * @author DEYNEX
+ */
+
 #ifndef MKS_SERVO42C_H
 #define MKS_SERVO42C_H
 

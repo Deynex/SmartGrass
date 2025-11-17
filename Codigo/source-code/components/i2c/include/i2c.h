@@ -11,6 +11,7 @@
  * - Gestión de múltiples dispositivos I2C en el mismo bus
  * - Lectura y escritura de registros de dispositivos I2C
  * - Manejo robusto de errores con logging detallado
+ * @author DEYNEX
  */
 
 #pragma once

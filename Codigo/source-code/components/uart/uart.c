@@ -7,7 +7,6 @@
  * driver UART estándar de ESP-IDF.
  * 
  * @author DEYNEX
- * @date 2025-11-11
  */
 
 #include "uart.h"

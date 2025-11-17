@@ -1,3 +1,9 @@
+/**
+ * @file mks_servo42c.c
+ * @brief Implementación de la API para control del servo motor MKS SERVO42C con encoder absoluto
+ * @author DEYNEX
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include "mks_servo42c.h"
