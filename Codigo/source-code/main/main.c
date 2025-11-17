@@ -20,6 +20,13 @@
 #define VEHICLE_DIR_RIGHT GPIO_NUM_4   // DIR para motores derechos
 #define VEHICLE_ENABLE_PIN GPIO_NUM_18 // ENABLE compartido para los 4 motores
 
+// Configuración de hardware para ESTE vehículo
+#define VEHICLE_LEDC_TIMER LEDC_TIMER_0
+#define VEHICLE_LEDC_CHANNEL LEDC_CHANNEL_0
+#define VEHICLE_STEPS_PER_REV 200 // Pasos por revolución (ej. 200 para 1.8°)
+#define VEHICLE_MICROSTEPS 1      // Microstepping (ej. 1 para full-step)
+#define VEHICLE_TOTAL_STEPS (VEHICLE_STEPS_PER_REV * VEHICLE_MICROSTEPS)
+
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Variables
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -32,7 +39,7 @@ int16_t accel_x_raw, accel_y_raw, accel_z_raw;
 int16_t temp_raw;
 int16_t gyro_x_raw, gyro_y_raw, gyro_z_raw;
 int64_t start_time, end_time;               // Variables para medir el tiempo de ejecución
-a4988_dual_handle_t *vehicle_handle = NULL; // Manejador del driver dual para el vehículo
+a4988_dual_handle_t vehicle_handle = NULL; // Manejador del driver dual para el vehículo
 mks_encoder_data_t enc_data;                // Datos del encoder
 mks_status_t status;                        // Estado del motor
 int32_t pulses_received;                    // Pulsos recibidos del encoder
@@ -76,7 +83,7 @@ void control(void *pvParameters)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-// MARK: Core 1: Motores y encoder
+// MARK: Core 1: Movimiento
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 void motors(void *pvParameters)
 {
@@ -234,18 +241,20 @@ static void vehicle_init(void)
     // Configuración del driver dual para el vehículo (4 motores)
     a4988_dual_config_t vehicle_config = {
         .step_pin = VEHICLE_STEP_PIN,
-        .dir_pin_left = VEHICLE_DIR_LEFT,
-        .dir_pin_right = VEHICLE_DIR_RIGHT,
+        .dir_left_pin = VEHICLE_DIR_LEFT,
+        .dir_right_pin = VEHICLE_DIR_RIGHT,
         .enable_pin = VEHICLE_ENABLE_PIN,
-        .steps_per_rev = TOTAL_STEPS,
-        .timer_num = A4988_TIMER,
-        .channel_num = A4988_CHANNEL,
+        .steps_per_rev = VEHICLE_TOTAL_STEPS, 
+        .timer_num = VEHICLE_LEDC_TIMER, 
+        .channel_num = VEHICLE_LEDC_CHANNEL,
     };
 
     // Inicializar el driver dual
+    // &vehicle_handle ahora es el tipo correcto (a4988_dual_handle_t*)
     esp_err_t ret = a4988_dual_init(&vehicle_config, &vehicle_handle);
     if (ret != ESP_OK)
     {
+        ESP_LOGE(TAG, "¡Falló la inicialización del A4988!");
         return;
     }
 

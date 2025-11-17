@@ -1,19 +1,52 @@
+#include "a4988.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "a4988.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h" // Para vTaskDelay
 #include "esp_log.h"
 #include "esp_err.h"
+#include "driver/ledc.h" // Necesario para la implementación de PWM
 
 static const char *TAG = "A4988";
 
+// --- Constantes de Implementación Privada ---
 // Configuración PWM
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Resolución de 13 bits
-#define LEDC_DUTY 700                   // Duty cycle (0-8191 para 13 bits)
+#define LEDC_DUTY 700                   // Ciclo de trabajo al 8.5%
 #define LEDC_MAX_FREQ 4000              // Frecuencia máxima en Hz
 
-esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t **handle)
+/**
+ * @brief Dirección del motor
+ */
+typedef enum
+{
+    A4988_DIR_CW = 0, // Sentido horario
+    A4988_DIR_CCW = 1 // Sentido antihorario
+} a4988_direction_t;
+// ---------------------------------------------
+
+/**
+ * @brief Estructura del handle
+ * Esta es la definición "real" de la estructura oculta.
+ */
+struct a4988_dual_handle_s
+{
+    gpio_num_t step_pin;
+    gpio_num_t dir_left_pin;
+    gpio_num_t dir_right_pin;
+    gpio_num_t enable_pin;
+    uint32_t steps_per_rev;
+    ledc_timer_t timer_num;
+    ledc_channel_t channel_num;
+    uint32_t current_frequency; // Frecuencia actual en Hz
+    bool enabled;
+    volatile bool running; // Flag para controlar la rotación continua
+};
+
+// --- Implementación de Funciones Públicas ---
+
+esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t *handle)
 {
     if (config == NULL || handle == NULL)
     {
@@ -22,29 +55,30 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
     }
 
     // Reservar memoria para el handle
-    *handle = (a4988_dual_handle_t *)malloc(sizeof(a4988_dual_handle_t));
-    if (*handle == NULL)
+    a4988_dual_handle_t new_handle = (a4988_dual_handle_t)malloc(sizeof(struct a4988_dual_handle_s));
+    if (new_handle == NULL)
     {
         ESP_LOGE(TAG, "Error al reservar memoria");
+        *handle = NULL;
         return ESP_ERR_NO_MEM;
     }
 
     // Copiar configuración
-    (*handle)->step_pin = config->step_pin;
-    (*handle)->dir_pin_left = config->dir_pin_left;
-    (*handle)->dir_pin_right = config->dir_pin_right;
-    (*handle)->enable_pin = config->enable_pin;
-    (*handle)->steps_per_rev = config->steps_per_rev;
-    (*handle)->timer_num = config->timer_num;
-    (*handle)->channel_num = config->channel_num;
-    (*handle)->current_frequency = 0;
-    (*handle)->enabled = false;
-    (*handle)->running = false;
+    new_handle->step_pin = config->step_pin;
+    new_handle->dir_left_pin = config->dir_left_pin;
+    new_handle->dir_right_pin = config->dir_right_pin;
+    new_handle->enable_pin = config->enable_pin;
+    new_handle->steps_per_rev = config->steps_per_rev;
+    new_handle->timer_num = config->timer_num;
+    new_handle->channel_num = config->channel_num;
+    new_handle->current_frequency = 0;
+    new_handle->enabled = false;
+    new_handle->running = false;
 
     // Configurar timer LEDC
     ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_MODE,
-        .timer_num = config->timer_num,
+        .timer_num = new_handle->timer_num,
         .duty_resolution = LEDC_DUTY_RES,
         .freq_hz = 1000, // Frecuencia inicial
         .clk_cfg = LEDC_AUTO_CLK,
@@ -53,16 +87,17 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Error al configurar timer LEDC");
-        free(*handle);
+        free(new_handle);
+        *handle = NULL;
         return ret;
     }
 
     // Configurar canal LEDC para el pin STEP compartido
     ledc_channel_config_t ledc_channel = {
         .speed_mode = LEDC_MODE,
-        .channel = config->channel_num,
-        .timer_sel = config->timer_num,
-        .gpio_num = config->step_pin,
+        .channel = new_handle->channel_num,
+        .timer_sel = new_handle->timer_num,
+        .gpio_num = new_handle->step_pin,
         .duty = 0, // Inicialmente apagado
         .hpoint = 0,
     };
@@ -70,7 +105,8 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Error al configurar canal LEDC");
-        free(*handle);
+        free(new_handle);
+        *handle = NULL;
         return ret;
     }
 
@@ -80,41 +116,47 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
-        .pin_bit_mask = (1ULL << config->dir_pin_left) | (1ULL << config->dir_pin_right),
+        .pin_bit_mask = (1ULL << new_handle->dir_left_pin) | (1ULL << new_handle->dir_right_pin),
     };
     ret = gpio_config(&io_conf);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Error al configurar pines DIR");
-        free(*handle);
+        free(new_handle);
+        *handle = NULL;
         return ret;
     }
-    gpio_set_level(config->dir_pin_left, 0);
-    gpio_set_level(config->dir_pin_right, 0);
+    gpio_set_level(new_handle->dir_left_pin, 0);
+    gpio_set_level(new_handle->dir_right_pin, 0);
 
     // Configurar ENABLE pin compartido (si está definido)
-    if (config->enable_pin != -1)
+    if (new_handle->enable_pin != -1)
     {
-        io_conf.pin_bit_mask = (1ULL << config->enable_pin);
+        io_conf.pin_bit_mask = (1ULL << new_handle->enable_pin);
         ret = gpio_config(&io_conf);
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Error al configurar pin ENABLE");
-            free(*handle);
+            free(new_handle);
+            *handle = NULL;
             return ret;
         }
-        gpio_set_level(config->enable_pin, 1); // HIGH = deshabilitado
+        gpio_set_level(new_handle->enable_pin, 1); // HIGH = deshabilitado
     }
 
     ESP_LOGI(TAG, "A4988 DUAL inicializado correctamente");
     ESP_LOGI(TAG, "STEP: GPIO%d (compartido), DIR_LEFT: GPIO%d, DIR_RIGHT: GPIO%d, ENABLE: GPIO%d",
-             config->step_pin, config->dir_pin_left, config->dir_pin_right, config->enable_pin);
-    ESP_LOGI(TAG, "Timer: %d, Canal: %d", config->timer_num, config->channel_num);
+             new_handle->step_pin, new_handle->dir_left_pin, new_handle->dir_right_pin, new_handle->enable_pin);
+    ESP_LOGI(TAG, "Timer: %d, Canal: %d", new_handle->timer_num, new_handle->channel_num);
 
+    // Devolvemos el handle creado
+    *handle = new_handle;
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_enable(a4988_dual_handle_t *handle)
+// El resto de funciones ahora usan 'handle' como el puntero opaco
+
+esp_err_t a4988_dual_enable(a4988_dual_handle_t handle)
 {
     if (handle == NULL)
     {
@@ -131,7 +173,7 @@ esp_err_t a4988_dual_enable(a4988_dual_handle_t *handle)
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_disable(a4988_dual_handle_t *handle)
+esp_err_t a4988_dual_disable(a4988_dual_handle_t handle)
 {
     if (handle == NULL)
     {
@@ -154,11 +196,17 @@ esp_err_t a4988_dual_disable(a4988_dual_handle_t *handle)
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_set_speed(a4988_dual_handle_t *handle, float rpm)
+esp_err_t a4988_dual_set_speed(a4988_dual_handle_t handle, float rpm)
 {
-    if (handle == NULL || rpm <= 0)
+    if (handle == NULL || rpm < 0) // Permitir rpm = 0 para detener
     {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    if (rpm == 0)
+    {
+        // Tratar rpm 0 como un stop
+        return a4988_dual_stop(handle);
     }
 
     // Calcular frecuencia en Hz desde RPM
@@ -179,28 +227,26 @@ esp_err_t a4988_dual_set_speed(a4988_dual_handle_t *handle, float rpm)
     }
 
     handle->current_frequency = (uint32_t)frequency_hz;
-    ESP_LOGI(TAG, "Velocidad del vehículo: %.2f RPM = %d Hz", rpm, handle->current_frequency);
-
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_move(a4988_dual_handle_t *handle, a4988_dual_direction_t direction, float rpm)
+esp_err_t a4988_dual_move(a4988_dual_handle_t handle, a4988_dual_direction_t direction, float rpm)
 {
     if (handle == NULL)
     {
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Detener primero si está en movimiento
+    // Si la dirección es STOP, solo detener
+    if (direction == A4988_DUAL_STOP || rpm <= 0)
+    {
+        return a4988_dual_stop(handle);
+    }
+
+    // Detener primero si está en movimiento (para cambiar dirección/velocidad)
     if (handle->running)
     {
         a4988_dual_stop(handle);
-    }
-
-    // Si la dirección es STOP, solo detener
-    if (direction == A4988_DUAL_STOP)
-    {
-        return a4988_dual_stop(handle);
     }
 
     // Establecer velocidad
@@ -214,31 +260,23 @@ esp_err_t a4988_dual_move(a4988_dual_handle_t *handle, a4988_dual_direction_t di
     switch (direction)
     {
     case A4988_DUAL_FORWARD:
-        // Ambos lados hacia adelante (misma dirección)
-        gpio_set_level(handle->dir_pin_left, A4988_DIR_CW);
-        gpio_set_level(handle->dir_pin_right, A4988_DIR_CW);
-        ESP_LOGI(TAG, "Vehículo AVANZANDO a %.2f RPM", rpm);
+        gpio_set_level(handle->dir_left_pin, A4988_DIR_CW);
+        gpio_set_level(handle->dir_right_pin, A4988_DIR_CW);
         break;
 
     case A4988_DUAL_BACKWARD:
-        // Ambos lados hacia atrás (misma dirección opuesta)
-        gpio_set_level(handle->dir_pin_left, A4988_DIR_CCW);
-        gpio_set_level(handle->dir_pin_right, A4988_DIR_CCW);
-        ESP_LOGI(TAG, "Vehículo RETROCEDIENDO a %.2f RPM", rpm);
+        gpio_set_level(handle->dir_left_pin, A4988_DIR_CCW);
+        gpio_set_level(handle->dir_right_pin, A4988_DIR_CCW);
         break;
 
     case A4988_DUAL_LEFT:
-        // Giro a la izquierda: izquierda atrás, derecha adelante
-        gpio_set_level(handle->dir_pin_left, A4988_DIR_CCW);
-        gpio_set_level(handle->dir_pin_right, A4988_DIR_CW);
-        ESP_LOGI(TAG, "Vehículo GIRANDO A LA IZQUIERDA a %.2f RPM", rpm);
+        gpio_set_level(handle->dir_left_pin, A4988_DIR_CCW);
+        gpio_set_level(handle->dir_right_pin, A4988_DIR_CW);
         break;
 
     case A4988_DUAL_RIGHT:
-        // Giro a la derecha: izquierda adelante, derecha atrás
-        gpio_set_level(handle->dir_pin_left, A4988_DIR_CW);
-        gpio_set_level(handle->dir_pin_right, A4988_DIR_CCW);
-        ESP_LOGI(TAG, "Vehículo GIRANDO A LA DERECHA a %.2f RPM", rpm);
+        gpio_set_level(handle->dir_left_pin, A4988_DIR_CW);
+        gpio_set_level(handle->dir_right_pin, A4988_DIR_CCW);
         break;
 
     default:
@@ -258,11 +296,16 @@ esp_err_t a4988_dual_move(a4988_dual_handle_t *handle, a4988_dual_direction_t di
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_stop(a4988_dual_handle_t *handle)
+esp_err_t a4988_dual_stop(a4988_dual_handle_t handle)
 {
     if (handle == NULL)
     {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!handle->running)
+    {
+        return ESP_OK; // Ya está detenido
     }
 
     // Detener PWM inmediatamente
@@ -270,22 +313,23 @@ esp_err_t a4988_dual_stop(a4988_dual_handle_t *handle)
     ledc_update_duty(LEDC_MODE, handle->channel_num);
 
     handle->running = false;
+    handle->current_frequency = 0;
 
     return ESP_OK;
 }
 
-esp_err_t a4988_dual_free(a4988_dual_handle_t *handle)
+esp_err_t a4988_dual_free(a4988_dual_handle_t *handle_ptr)
 {
-    if (handle == NULL)
+    // Recibimos un puntero al handle (a4988_dual_handle_t*)
+    if (handle_ptr == NULL || *handle_ptr == NULL)
     {
         return ESP_ERR_INVALID_ARG;
     }
 
+    a4988_dual_handle_t handle = *handle_ptr; // Obtenemos el puntero real
+
     // Detener si está en movimiento
-    if (handle->running)
-    {
-        a4988_dual_stop(handle);
-    }
+    a4988_dual_stop(handle);
 
     // Deshabilitar motores antes de liberar
     a4988_dual_disable(handle);
@@ -295,6 +339,11 @@ esp_err_t a4988_dual_free(a4988_dual_handle_t *handle)
 
     // Liberar memoria
     free(handle);
+
+    // Establecer el puntero original a NULL para evitar "dangling pointers"
+    *handle_ptr = NULL;
+
+    ESP_LOGI(TAG, "Driver A4988 DUAL liberado");
 
     return ESP_OK;
 }
