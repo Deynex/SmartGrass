@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Pines para el driver dual (4 motores: 2 izquierda, 2 derecha)
 #define VEHICLE_STEP_PIN GPIO_NUM_23   // STEP compartido para los 4 motores
-#define VEHICLE_DIR_LEFT GPIO_NUM_25   // DIR para motores izquierdos
+#define VEHICLE_DIR_LEFT GPIO_NUM_19   // DIR para motores izquierdos
 #define VEHICLE_DIR_RIGHT GPIO_NUM_4   // DIR para motores derechos
 #define VEHICLE_ENABLE_PIN GPIO_NUM_18 // ENABLE compartido para los 4 motores
 
