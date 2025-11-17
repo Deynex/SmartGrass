@@ -14,6 +14,11 @@
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Bus I2C
+#define I2C_MASTER_SCL 22
+#define I2C_MASTER_SDA 21
+#define I2C_MASTER_NUM I2C_NUM_0
+
 // Pines para el driver dual (4 motores: 2 izquierda, 2 derecha)
 #define VEHICLE_STEP_PIN GPIO_NUM_23   // STEP compartido para los 4 motores
 #define VEHICLE_DIR_LEFT GPIO_NUM_19   // DIR para motores izquierdos
@@ -38,12 +43,12 @@ i2c_master_dev_handle_t mpu6050_handle; // Manejador del dispositivo MPU6050
 int16_t accel_x_raw, accel_y_raw, accel_z_raw;
 int16_t temp_raw;
 int16_t gyro_x_raw, gyro_y_raw, gyro_z_raw;
-int64_t start_time, end_time;               // Variables para medir el tiempo de ejecución
+int64_t start_time, end_time;              // Variables para medir el tiempo de ejecución
 a4988_dual_handle_t vehicle_handle = NULL; // Manejador del driver dual para el vehículo
-mks_encoder_data_t enc_data;                // Datos del encoder
-mks_status_t status;                        // Estado del motor
-int32_t pulses_received;                    // Pulsos recibidos del encoder
-float shaft_error;                          // Error angular del eje
+mks_encoder_data_t enc_data;               // Datos del encoder
+mks_status_t status;                       // Estado del motor
+int32_t pulses_received;                   // Pulsos recibidos del encoder
+float shaft_error;                         // Error angular del eje
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Core 0: Control
@@ -244,8 +249,8 @@ static void vehicle_init(void)
         .dir_left_pin = VEHICLE_DIR_LEFT,
         .dir_right_pin = VEHICLE_DIR_RIGHT,
         .enable_pin = VEHICLE_ENABLE_PIN,
-        .steps_per_rev = VEHICLE_TOTAL_STEPS, 
-        .timer_num = VEHICLE_LEDC_TIMER, 
+        .steps_per_rev = VEHICLE_TOTAL_STEPS,
+        .timer_num = VEHICLE_LEDC_TIMER,
         .channel_num = VEHICLE_LEDC_CHANNEL,
     };
 
@@ -267,18 +272,46 @@ static void vehicle_init(void)
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 void app_main(void)
 {
+    esp_err_t ret; // Variable para comprobar los retornos
+
     // Inicialización del bus I2C y del dispositivo MPU6050
-    i2c_master_bus_init(&i2c_bus_handle);
-    i2c_add_device(i2c_bus_handle, &mpu6050_handle, MPU6050_ADDR, MPU6050_I2C_FREQ_HZ);
+    ESP_LOGI(TAG, "Inicializando bus I2C...");
+    ret = i2c_master_bus_init(&i2c_bus_handle, I2C_MASTER_SDA, I2C_MASTER_SCL, I2C_MASTER_NUM);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "¡Falló la inicialización del bus I2C!");
+        return;
+    }
 
-    // Inicialización del dispositivo MPU6050
-    mpu6050_init(mpu6050_handle);
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Añadiendo MPU6050 al bus I2C...");
+        ret = i2c_add_device(i2c_bus_handle, &mpu6050_handle, MPU6050_ADDR, MPU6050_I2C_FREQ_HZ);
+    }
 
-    // Configuración del rango del acelerómetro
-    mpu6050_set_accel_range(mpu6050_handle, MPU6050_ACCEL_RANGE_2G);
+    // Inicializar MPU6050
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Inicializando driver MPU6050...");
+        ret = mpu6050_init(mpu6050_handle); // Asumiendo que mpu6050_init devuelve esp_err_t
+    }
 
-    // Configuración del rango del giroscopio
-    mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
+    // Configurar MPU6050
+    if (ret == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Configurando rangos de MPU6050...");
+        mpu6050_set_accel_range(mpu6050_handle, MPU6050_ACCEL_RANGE_2G);
+        mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
+    }
+
+    // Comprobación final
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "¡Falló la inicialización de I2C/MPU6050!");
+        return; // Detiene app_main si falló
+    }
+
+    ESP_LOGI(TAG, "I2C y MPU6050 inicializados correctamente.");
 
     // Inicialización del UART
     uart_init();
