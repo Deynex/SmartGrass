@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-// Bus I2C
+// Bus I2C maestro para el MPU6050
 #define I2C_MASTER_SCL 22
 #define I2C_MASTER_SDA 21
 #define I2C_MASTER_NUM I2C_NUM_0
@@ -255,7 +255,6 @@ static void vehicle_init(void)
     };
 
     // Inicializar el driver dual
-    // &vehicle_handle ahora es el tipo correcto (a4988_dual_handle_t*)
     esp_err_t ret = a4988_dual_init(&vehicle_config, &vehicle_handle);
     if (ret != ESP_OK)
     {

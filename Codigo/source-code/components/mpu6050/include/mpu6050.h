@@ -177,70 +177,60 @@ typedef enum
 } mpu6050_clock_source_t;
 
 /**
- * @brief Inicializa el sensor MPU6050.
- * Se encarga de reiniciar el sensor y verificar la comunicación con el mismo.
+ * @brief Inicializa el sensor MPU6050 y verifica WHO_AM_I.
  * @param mpu6050_handle Manejador del dispositivo
- * @return esp_err_t
+ * @return esp_err_t ESP_OK si la ID (0x68) es correcta
  */
 esp_err_t mpu6050_init(i2c_master_dev_handle_t mpu6050_handle);
 
 /**
  * @brief Configura el rango del acelerómetro.
- * @param mpu6050_handle Manejador del dispositivo
- * @param range Rango del acelerómetro (ver mpu6050_accel_range_t)
- * @return esp_err_t
  */
 esp_err_t mpu6050_set_accel_range(i2c_master_dev_handle_t mpu6050_handle, mpu6050_accel_range_t range);
 
 /**
- * @brief Lee los valores crudos del acelerómetro.
- * @param dev_handle Manejador del dispositivo
- * @param accel_x_raw Puntero al valor crudo del eje X
- * @param accel_y_raw Puntero al valor crudo del eje Y
- * @param accel_z_raw Puntero al valor crudo del eje Z
- */
-void mpu6050_read_accelerometer_raw(i2c_master_dev_handle_t dev_handle, int16_t *accel_x_raw, int16_t *accel_y_raw, int16_t *accel_z_raw);
-
-/**
- * @brief Lee el valor crudo de la temperatura.
- * @param dev_handle Manejador del dispositivo
- * @param temp_raw Puntero al valor crudo de la temperatura
- */
-void mpu6050_read_temperature_raw(i2c_master_dev_handle_t dev_handle, int16_t *temp_raw);
-
-/**
- * @brief Lee el valor de la temperatura.
- * @param dev_handle Manejador del dispositivo
- * @param temperature Puntero al valor de la temperatura
- */
-void mpu6050_read_temperature(i2c_master_dev_handle_t dev_handle, float *temperature);
-
-/**
  * @brief Configura el rango del giroscopio.
- * @param mpu6050_handle Manejador del dispositivo
- * @param range Rango del giroscopio (ver mpu6050_gyro_range_t)
- * @return esp_err_t
  */
 esp_err_t mpu6050_set_gyro_range(i2c_master_dev_handle_t mpu6050_handle, mpu6050_gyro_range_t range);
 
 /**
- * @brief Lee los valores crudos del giroscopio.
- * @param dev_handle Manejador del dispositivo
- * @param gyro_x_raw Puntero al valor crudo del eje X
- * @param gyro_y_raw Puntero al valor crudo del eje Y
- * @param gyro_z_raw Puntero al valor crudo del eje Z
+ * @brief Lee los valores crudos del acelerómetro.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
  */
-void mpu6050_read_gyroscope_raw(i2c_master_dev_handle_t dev_handle, int16_t *gyro_x_raw, int16_t *gyro_y_raw, int16_t *gyro_z_raw);
+esp_err_t mpu6050_read_accelerometer_raw(i2c_master_dev_handle_t dev_handle, int16_t *accel_x_raw, int16_t *accel_y_raw, int16_t *accel_z_raw);
 
 /**
- * @brief Lee todos los valores crudos del sensor.
- * @param dev_handle Manejador del dispositivo
- * @param accel_x Puntero al valor crudo del eje X del acelerómetro
- * @param accel_y Puntero al valor crudo del eje Y del acelerómetro
- * @param accel_z Puntero al valor crudo del eje Z del acelerómetro
- * @param temp Puntero al valor crudo de la temperatura
- * @param gyro_x Puntero al valor crudo del eje X del giroscopio
- * @param gyro_y Puntero al valor crudo del eje Y del giroscopio
- * @param gyro_z Puntero al valor crudo del eje Z del giroscopio
+ * @brief Lee los valores del acelerómetro y los convierte a g.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
  */
-void mpu6050_read_all_raw(i2c_master_dev_handle_t dev_handle, int16_t *accel_x, int16_t *accel_y, int16_t *accel_z, int16_t *temp, int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
+esp_err_t mpu6050_read_accelerometer(i2c_master_dev_handle_t dev_handle, float *a_x, float *a_y, float *a_z, mpu6050_accel_range_t range);
+
+/**
+ * @brief Lee el valor crudo de la temperatura.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
+ */
+esp_err_t mpu6050_read_temperature_raw(i2c_master_dev_handle_t dev_handle, int16_t *temp_raw);
+
+/**
+ * @brief Lee el valor de la temperatura y la convierte a °C.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
+ */
+esp_err_t mpu6050_read_temperature(i2c_master_dev_handle_t dev_handle, float *temperature);
+
+/**
+ * @brief Lee los valores crudos del giroscopio.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
+ */
+esp_err_t mpu6050_read_gyroscope_raw(i2c_master_dev_handle_t dev_handle, int16_t *gyro_x_raw, int16_t *gyro_y_raw, int16_t *gyro_z_raw);
+
+/**
+ * @brief Lee los valores del giroscopio y los convierte a °/s.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
+ */
+esp_err_t mpu6050_read_gyroscope(i2c_master_dev_handle_t dev_handle, float *g_x, float *g_y, float *g_z, mpu6050_gyro_range_t range);
+
+/**
+ * @brief Lee todos los valores crudos del sensor en una sola operación I2C.
+ * @return esp_err_t ESP_OK si la lectura I2C fue exitosa
+ */
+esp_err_t mpu6050_read_all_raw(i2c_master_dev_handle_t dev_handle, int16_t *accel_x, int16_t *accel_y, int16_t *accel_z, int16_t *temp, int16_t *gyro_x, int16_t *gyro_y, int16_t *gyro_z);
