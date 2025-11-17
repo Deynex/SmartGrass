@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +11,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,7 +21,7 @@
             align-items: center;
             padding: 20px;
         }
-        
+
         .container {
             background: white;
             padding: 40px;
@@ -29,19 +30,19 @@
             max-width: 600px;
             width: 100%;
         }
-        
+
         h1 {
             color: #667eea;
             margin-bottom: 20px;
             text-align: center;
         }
-        
+
         p {
             color: #555;
             line-height: 1.6;
             margin-bottom: 15px;
         }
-        
+
         .button {
             background: #667eea;
             color: white;
@@ -54,24 +55,48 @@
             display: block;
             margin: 20px auto 0;
         }
-        
+
         .button:hover {
             background: #764ba2;
         }
-        
+
         .info {
             background: #f0f0f0;
             padding: 15px;
             border-radius: 8px;
             margin-top: 20px;
         }
+
+        .notification {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🌱 SmartGrass</h1>
         <p>Bienvenido a la página de prueba. Esta es una página web simple y funcional.</p>
-        
+
         <div class="info">
             <p><strong>Características:</strong></p>
             <ul style="margin-left: 20px; color: #555;">
@@ -80,14 +105,77 @@
                 <li>Fácil de personalizar</li>
             </ul>
         </div>
-        
+
         <button class="button" onclick="mostrarMensaje()">Haz clic aquí</button>
+        <div class="notification" id="notification">¡Hola! Esta es una página de prueba funcionando correctamente. 👍
+        </div>
     </div>
-    
+
     <script>
         function mostrarMensaje() {
-            alert('¡Hola! Esta es una página de prueba funcionando correctamente. 👍');
+            const notification = document.getElementById('notification');
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Crea la conexión WebSocket. 
+        // Usa "window.location.host" para que funcione tanto en 192.168.2.1 como en esp_softap.local
+        const ws_url = "ws://" + window.location.host + "/ws";
+        let socket;
+
+        function connectWebSocket() {
+            console.log("Intentando conectar WebSocket a:", ws_url);
+            socket = new WebSocket(ws_url);
+
+            // 1. Evento: Conexión abierta
+            socket.onopen = function (e) {
+                console.log("[open] Conexión establecida");
+                // Envía un mensaje al ESP32 justo después de conectar
+                socket.send("¡Hola ESP32 desde la web!");
+            };
+
+            // 2. Evento: Mensaje recibido
+            socket.onmessage = function (event) {
+                console.log(`[message] Datos recibidos del servidor: ${event.data}`);
+
+                // Aquí puedes actualizar tu página web, por ejemplo:
+                // document.getElementById("sensor-data").innerText = event.data;
+            };
+
+            // 3. Evento: Conexión cerrada
+            socket.onclose = function (event) {
+                if (event.wasClean) {
+                    console.log(`[close] Conexión cerrada limpiamente, code=${event.code} reason=${event.reason}`);
+                } else {
+                    console.log('[close] Conexión perdida. Intentando reconectar en 3 segundos...');
+                    setTimeout(connectWebSocket, 3000); // Intenta reconectar
+                }
+            };
+
+            // 4. Evento: Error
+            socket.onerror = function (error) {
+                console.log(`[error] ${error.message}`);
+                socket.close(); // Cierra el socket para disparar el 'onclose' y reconectar
+            };
+        }
+
+        // Inicia la conexión
+        connectWebSocket();
+
+        // --- Función de ejemplo para enviar datos al ESP32 ---
+        function sendLedToggle() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                // Envía un JSON, por ejemplo
+                let msg = JSON.stringify({ command: "toggle_led" });
+                socket.send(msg);
+            } else {
+                console.log("WebSocket no está conectado.");
+            }
         }
     </script>
 </body>
+
 </html>

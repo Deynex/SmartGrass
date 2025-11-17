@@ -1,6 +1,7 @@
 idf_component_register(SRCS "server.c"
                     REQUIRES
                         esp_http_server
+                        ws
                     INCLUDE_DIRS "include"
                     EMBED_TXTFILES
                     # Pagina principal

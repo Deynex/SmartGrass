@@ -293,6 +293,7 @@ void app_main(void)
     // Inicializar NVS, WiFi y servidor HTTP
     nvs_init();
     wifi_init();
+    http_server_init();
 
     ESP_LOGI(TAG, "Inicializando componente de vehículo...");
 
