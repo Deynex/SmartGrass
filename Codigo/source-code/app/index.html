@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página de Prueba</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            display: block;
+            margin: 20px auto 0;
+        }
+        
+        .button:hover {
+            background: #764ba2;
+        }
+        
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌱 SmartGrass</h1>
+        <p>Bienvenido a la página de prueba. Esta es una página web simple y funcional.</p>
+        
+        <div class="info">
+            <p><strong>Características:</strong></p>
+            <ul style="margin-left: 20px; color: #555;">
+                <li>Diseño responsive</li>
+                <li>Estilos modernos</li>
+                <li>Fácil de personalizar</li>
+            </ul>
+        </div>
+        
+        <button class="button" onclick="mostrarMensaje()">Haz clic aquí</button>
+    </div>
+    
+    <script>
+        function mostrarMensaje() {
+            alert('¡Hola! Esta es una página de prueba funcionando correctamente. 👍');
+        }
+    </script>
+</body>
+</html>

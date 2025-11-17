@@ -11,6 +11,7 @@
 #include "mks_servo42c.h"
 #include "soft_ap.h"
 #include "vehicle.h"
+#include "server.h"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
@@ -107,14 +108,6 @@ void motors(void *pvParameters)
         // Retroceder
         vehicle_move(vehicle_handle, A4988_DUAL_BACKWARD, 180.0);
         vTaskDelay(pdMS_TO_TICKS(5000));
-
-        // Apagar motores
-        vehicle_disable(vehicle_handle);
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        // Encender motores
-        vehicle_enable(vehicle_handle);
-        vTaskDelay(pdMS_TO_TICKS(1000));
 
         // Girar a la izquierda
         vehicle_move(vehicle_handle, A4988_DUAL_LEFT, 180.0);

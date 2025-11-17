@@ -16,8 +16,8 @@ static const char *TAG = "VEHICLE";
  * @brief Dirección del motor MKS (definido por hardware)
  * Asumimos 0 = CW = Hacia adelante, 1 = CCW = Hacia atrás
  */
-#define MKS_DIR_FORWARD 0
-#define MKS_DIR_BACKWARD 1
+#define MKS_DIR_FORWARD 1
+#define MKS_DIR_BACKWARD 0
 
 /**
  * @brief Estructura interna del handle del vehículo

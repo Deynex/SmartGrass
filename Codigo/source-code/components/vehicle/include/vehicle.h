@@ -97,4 +97,14 @@ esp_err_t vehicle_stop(vehicle_handle_t handle);
  */
 esp_err_t vehicle_free(vehicle_handle_t *handle_ptr);
 
+/**
+ * @brief Lee el desfase de pulsos del MKS y lo corrige
+ * * Esta función es útil para re-sincronizar el motor MKS a cero
+ * después de largos períodos de movimiento.
+ *
+ * @param handle Handle del vehículo
+ * @return esp_err_t ESP_OK si la corrección fue exitosa o no necesaria
+ */
+esp_err_t vehicle_correct_drift(vehicle_handle_t handle);
+
 #endif // VEHICLE_H
