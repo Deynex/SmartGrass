@@ -32,7 +32,6 @@ int16_t accel_x_raw, accel_y_raw, accel_z_raw;
 int16_t temp_raw;
 int16_t gyro_x_raw, gyro_y_raw, gyro_z_raw;
 int64_t start_time, end_time;               // Variables para medir el tiempo de ejecución
-SemaphoreHandle_t mutex;                    // Mutex para proteger el acceso a variables compartidas
 a4988_dual_handle_t *vehicle_handle = NULL; // Manejador del driver dual para el vehículo
 mks_encoder_data_t enc_data;                // Datos del encoder
 mks_status_t status;                        // Estado del motor
@@ -285,15 +284,6 @@ void app_main(void)
 
     // Inicialización de los motores del vehículo
     vehicle_init();
-
-    // Crear mutex
-    mutex = xSemaphoreCreateMutex();
-
-    if (mutex == NULL)
-    {
-        ESP_LOGE(TAG, "Error al crear mutex");
-        return;
-    }
 
     // Calibrar encoder al inicio
     if (!mks_calibrate_encoder())
