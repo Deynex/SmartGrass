@@ -154,7 +154,7 @@ static void http_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 
 static httpd_handle_t server_handle = NULL;
 
-esp_err_t http_server_init(void)
+esp_err_t http_server_init(vehicle_handle_t vehicle)
 {
     // Verificar si el servidor ya está iniciado
     if (server_handle != NULL) {
@@ -219,15 +219,18 @@ esp_err_t http_server_init(void)
     }
 
     // Registrar handlers de WebSocket
-    ret = ws_server_register_handlers(server_handle);
+    // **************************************************
+    // ** REGISTRAR HANDLER WEBSOCKET         **
+    // **************************************************
+    // Le pasamos el handle del vehículo al módulo WebSocket
+    ret = ws_server_register_handlers(server_handle, vehicle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Error registrando handler de WebSocket: %s", esp_err_to_name(ret));
-        http_server_stop();
+        httpd_stop(server_handle); // Detener si falla
         return ret;
     }
 
-    ESP_LOGI(TAG, "Servidor HTTP iniciado correctamente");
-    ESP_LOGI(TAG, "URIs registradas: / y /favicon.ico");
+    ESP_LOGI(TAG, "Servidor HTTP y WebSocket iniciados correctamente");
     
     return ESP_OK;
 }
@@ -257,21 +260,4 @@ void http_server_stop(void)
     server_handle = NULL;
     
     ESP_LOGI(TAG, "Servidor HTTP detenido correctamente");
-}
-
-void http_server_restart(void)
-{
-    ESP_LOGI(TAG, "Reiniciando servidor HTTP...");
-    
-    http_server_stop();
-    
-    // Delay para asegurar que todos los recursos se liberen
-    vTaskDelay(pdMS_TO_TICKS(500));
-    
-    esp_err_t ret = http_server_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Error reiniciando servidor HTTP: %s", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(TAG, "Servidor HTTP reiniciado correctamente");
-    }
 }

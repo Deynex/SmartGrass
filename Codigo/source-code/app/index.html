@@ -1,181 +1,395 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página de Prueba</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ESP32 Vehicle Control</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-user-select: none; /* Evitar selección de texto */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* Evitar flash en móviles */
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            height: 100vh;
+            padding: 10px;
+            overflow: hidden;
         }
 
         .container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
-            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            height: calc(100vh - 20px);
+            max-width: 100%;
         }
 
-        h1 {
-            color: #667eea;
-            margin-bottom: 20px;
-            text-align: center;
+        .panel {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
         }
 
-        p {
-            color: #555;
-            line-height: 1.6;
+        .panel-top-left {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .panel-bottom-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .panel-right {
+            grid-column: 2;
+            grid-row: 1 / 3;
+        }
+        
+        /* Adaptación para móviles (columnas apiladas) */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+                overflow: auto; /* Permitir scroll en móvil */
+                height: auto;
+                min-height: 100vh;
+            }
+            .container {
+                grid-template-columns: 1fr; /* Una sola columna */
+                grid-template-rows: auto; /* Altura automática */
+                height: auto;
+                gap: 10px;
+            }
+            .panel-right {
+                grid-column: 1;
+                grid-row: 3; /* El panel derecho va al final */
+                min-height: 300px;
+            }
+            .panel-bottom-left {
+                grid-column: 1;
+                grid-row: 2;
+            }
+        }
+
+
+        .panel::-webkit-scrollbar { width: 8px; }
+        .panel::-webkit-scrollbar-track { background: #0d1117; border-radius: 4px; }
+        .panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        .panel::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #58a6ff;
             margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #30363d;
+            flex-shrink: 0;
         }
 
-        .button {
-            background: #667eea;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
+        /* --- Panel de Telemetría --- */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            flex-grow: 1;
+            overflow: auto;
+            padding-top: 5px;
+        }
+        .telemetry-group {
+            background-color: #0d1117;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #30363d;
+        }
+        .telemetry-group h4 {
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+        .telemetry-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .telemetry-item .label {
+            color: #c9d1d9;
+        }
+        .telemetry-item .value {
+            font-weight: 600;
+            color: #f0f6fc;
+            min-width: 40px;
+            text-align: right;
+        }
+        .value.unit {
+            color: #8b949e;
+            font-weight: normal;
+            margin-left: 4px;
+        }
+        
+        /* --- Panel de Control --- */
+        .control-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            flex-grow: 1;
+            min-height: 150px;
+        }
+        .control-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            font-size: 24px;
             cursor: pointer;
+            transition: background-color 0.1s ease, transform 0.1s ease;
+        }
+        .control-button:active {
+            background-color: #58a6ff;
+            color: #0d1117;
+            transform: scale(0.95);
+        }
+        
+        #btn-forward { grid-column: 2; grid-row: 1; }
+        #btn-left { grid-column: 1; grid-row: 2; }
+        #btn-stop { grid-column: 2; grid-row: 2; background-color: #8b0000; border-color: #a11313; }
+        #btn-right { grid-column: 3; grid-row: 2; }
+        #btn-backward { grid-column: 2; grid-row: 3; }
+
+        /* --- Panel de Estado --- */
+        .status-light {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #8b0000; /* Rojo por defecto */
+            border: 1px solid #30363d;
+            margin-right: 10px;
+            transition: background-color 0.5s ease;
+        }
+        .status-light.connected {
+            background-color: #238636; /* Verde */
+        }
+        .status-container {
+            display: flex;
+            align-items: center;
             font-size: 16px;
-            transition: background 0.3s;
-            display: block;
-            margin: 20px auto 0;
-        }
-
-        .button:hover {
-            background: #764ba2;
-        }
-
-        .info {
-            background: #f0f0f0;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        .notification {
-            background: #4caf50;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            display: none;
-            text-align: center;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
     </style>
 </head>
-
 <body>
     <div class="container">
-        <h1>🌱 SmartGrass</h1>
-        <p>Bienvenido a la página de prueba. Esta es una página web simple y funcional.</p>
-
-        <div class="info">
-            <p><strong>Características:</strong></p>
-            <ul style="margin-left: 20px; color: #555;">
-                <li>Diseño responsive</li>
-                <li>Estilos modernos</li>
-                <li>Fácil de personalizar</li>
-            </ul>
+        <!-- Panel de Telemetría -->
+        <div class="panel panel-top-left">
+            <div class="panel-title">Telemetría</div>
+            <div class="telemetry-grid">
+                <div class="telemetry-group">
+                    <h4>MPU - Acelerómetro</h4>
+                    <div class="telemetry-item"><span class="label">Accel X:</span> <span class="value" id="accel_x">0</span></div>
+                    <div class="telemetry-item"><span class="label">Accel Y:</span> <span class="value" id="accel_y">0</span></div>
+                    <div class="telemetry-item"><span class="label">Accel Z:</span> <span class="value" id="accel_z">0</span></div>
+                </div>
+                <div class="telemetry-group">
+                    <h4>MPU - Giroscopio</h4>
+                    <div class="telemetry-item"><span class="label">Gyro X:</span> <span class="value" id="gyro_x">0</span></div>
+                    <div class="telemetry-item"><span class="label">Gyro Y:</span> <span class="value" id="gyro_y">0</span></div>
+                    <div class="telemetry-item"><span class="label">Gyro Z:</span> <span class="value" id="gyro_z">0</span></div>
+                </div>
+                <div class="telemetry-group">
+                    <h4>MKS Encoder</h4>
+                    <div class="telemetry-item"><span class="label">Ángulo:</span> <span class="value" id="enc_angle">0.00</span><span class="value unit">°</span></div>
+                    <div class="telemetry-item"><span class="label">Total:</span> <span class="value" id="enc_total">0.00</span><span class="value unit">°</span></div>
+                    <div class="telemetry-item"><span class="label">Vueltas:</span> <span class="value" id="enc_carry">0</span></div>
+                </div>
+                <div class="telemetry-group">
+                    <h4>Estado Vehículo</h4>
+                    <div class="telemetry-item"><span class="label">Temp MPU:</span> <span class="value" id="temp">0</span><span class="value unit">°C</span></div>
+                    <div class="telemetry-item"><span class="label">Velocidad:</span> <span class="value" id="motor_speed">0</span><span class="value unit">RPM</span></div>
+                    <div class="telemetry-item"><span class="label">Corriente:</span> <span class="value" id="motor_current">0</span><span class="value unit">mA</span></div>
+                    <div class="telemetry-item"><span class="label">Error Eje:</span> <span class="value" id="shaft_error">0.00</span><span class="value unit">°</span></div>
+                </div>
+            </div>
         </div>
-
-        <button class="button" onclick="mostrarMensaje()">Haz clic aquí</button>
-        <div class="notification" id="notification">¡Hola! Esta es una página de prueba funcionando correctamente. 👍
+        
+        <!-- Panel de Control -->
+        <div class="panel panel-bottom-left">
+            <div class="panel-title">Control Manual</div>
+            <div class="control-pad">
+                <div class="control-button" id="btn-forward">▲</div>
+                <div class="control-button" id="btn-left">◀</div>
+                <div class="control-button" id="btn-stop">■</div>
+                <div class="control-button" id="btn-right">▶</div>
+                <div class="control-button" id="btn-backward">▼</div>
+            </div>
+        </div>
+        
+        <!-- Panel de Estado/Log -->
+        <div class="panel panel-right">
+            <div class="panel-title">Estado de Conexión</div>
+            <div class="status-container">
+                <div class="status-light" id="status-light"></div>
+                <span id="status-text">Desconectado</span>
+            </div>
+            <!-- Aquí se podría agregar un log de eventos -->
         </div>
     </div>
 
-    <script>
-        function mostrarMensaje() {
-            const notification = document.getElementById('notification');
-            notification.style.display = 'block';
+<script>
+    // --- Comandos (Cliente -> ESP32) ---
+    // Protocolo de 1 byte
+    const CMD_STOP = 0x00;
+    const CMD_FORWARD = 0x01;
+    const CMD_BACKWARD = 0x02;
+    const CMD_LEFT = 0x03;
+    const CMD_RIGHT = 0x04;
 
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
+    // --- Elementos del DOM ---
+    const statusLight = document.getElementById('status-light');
+    const statusText = document.getElementById('status-text');
+    
+    // Telemetría
+    const telemetryFields = {
+        accel_x: document.getElementById('accel_x'),
+        accel_y: document.getElementById('accel_y'),
+        accel_z: document.getElementById('accel_z'),
+        gyro_x: document.getElementById('gyro_x'),
+        gyro_y: document.getElementById('gyro_y'),
+        gyro_z: document.getElementById('gyro_z'),
+        enc_angle: document.getElementById('enc_angle'),
+        enc_total: document.getElementById('enc_total'),
+        enc_carry: document.getElementById('enc_carry'),
+        temp: document.getElementById('temp'),
+        motor_speed: document.getElementById('motor_speed'),
+        motor_current: document.getElementById('motor_current'),
+        shaft_error: document.getElementById('shaft_error'),
+    };
 
-        // Crea la conexión WebSocket. 
-        // Usa "window.location.host" para que funcione tanto en 192.168.2.1 como en esp_softap.local
+    // Botones de control
+    const buttons = {
+        forward: document.getElementById('btn-forward'),
+        backward: document.getElementById('btn-backward'),
+        left: document.getElementById('btn-left'),
+        right: document.getElementById('btn-right'),
+        stop: document.getElementById('btn-stop'),
+    };
+
+    let socket;
+
+    function connectWebSocket() {
         const ws_url = "ws://" + window.location.host + "/ws";
-        let socket;
+        console.log("Intentando conectar WebSocket a:", ws_url);
+        
+        socket = new WebSocket(ws_url);
+        socket.binaryType = "arraybuffer"; // Importante para enviar bytes
 
-        function connectWebSocket() {
-            console.log("Intentando conectar WebSocket a:", ws_url);
-            socket = new WebSocket(ws_url);
+        socket.onopen = () => {
+            console.log("[open] Conexión establecida");
+            statusLight.classList.add('connected');
+            statusText.innerText = "Conectado";
+        };
 
-            // 1. Evento: Conexión abierta
-            socket.onopen = function (e) {
-                console.log("[open] Conexión establecida");
-                // Envía un mensaje al ESP32 justo después de conectar
-                socket.send("¡Hola ESP32 desde la web!");
-            };
-
-            // 2. Evento: Mensaje recibido
-            socket.onmessage = function (event) {
-                console.log(`[message] Datos recibidos del servidor: ${event.data}`);
-
-                // Aquí puedes actualizar tu página web, por ejemplo:
-                // document.getElementById("sensor-data").innerText = event.data;
-            };
-
-            // 3. Evento: Conexión cerrada
-            socket.onclose = function (event) {
-                if (event.wasClean) {
-                    console.log(`[close] Conexión cerrada limpiamente, code=${event.code} reason=${event.reason}`);
-                } else {
-                    console.log('[close] Conexión perdida. Intentando reconectar en 3 segundos...');
-                    setTimeout(connectWebSocket, 3000); // Intenta reconectar
+        socket.onmessage = (event) => {
+            // Esperamos que la telemetría venga como texto (JSON)
+            if (typeof event.data === 'string') {
+                try {
+                    const telemetry = JSON.parse(event.data);
+                    updateTelemetryUI(telemetry);
+                } catch (e) {
+                    console.error("Error al parsear JSON de telemetría:", e);
                 }
-            };
-
-            // 4. Evento: Error
-            socket.onerror = function (error) {
-                console.log(`[error] ${error.message}`);
-                socket.close(); // Cierra el socket para disparar el 'onclose' y reconectar
-            };
-        }
-
-        // Inicia la conexión
-        connectWebSocket();
-
-        // --- Función de ejemplo para enviar datos al ESP32 ---
-        function sendLedToggle() {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                // Envía un JSON, por ejemplo
-                let msg = JSON.stringify({ command: "toggle_led" });
-                socket.send(msg);
             } else {
-                console.log("WebSocket no está conectado.");
+                // Manejar datos binarios si es necesario (ej. logs)
+                console.log("[message] Datos binarios recibidos (no esperado):", event.data);
+            }
+        };
+
+        socket.onclose = (event) => {
+            console.log('[close] Conexión perdida. Intentando reconectar...');
+            statusLight.classList.remove('connected');
+            statusText.innerText = "Reconectando...";
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        socket.onerror = (error) => {
+            console.error(`[error] ${error.message}`);
+            statusText.innerText = "Error de conexión";
+            socket.close();
+        };
+    }
+
+    function updateTelemetryUI(data) {
+        // Itera sobre las claves del JSON y actualiza el HTML
+        for (const key in data) {
+            if (telemetryFields[key]) {
+                let value = data[key];
+                // Formatear números flotantes a 2 decimales
+                if (typeof value === 'number' && !Number.isInteger(value)) {
+                    value = value.toFixed(2);
+                }
+                telemetryFields[key].innerText = value;
             }
         }
-    </script>
-</body>
+    }
 
+    function sendCommand(commandByte) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            const command = new Uint8Array([commandByte]);
+            socket.send(command.buffer);
+            console.log("Comando enviado:", commandByte);
+        } else {
+            console.log("WebSocket no está conectado. No se envió el comando.");
+        }
+    }
+
+    // --- Asignar Eventos de Control ---
+    // Usamos 'mousedown' y 'touchstart' para iniciar el movimiento
+    // Usamos 'mouseup' y 'touchend' para detener el movimiento
+    
+    // Mapeo de botones a comandos
+    const buttonMap = {
+        forward: CMD_FORWARD,
+        backward: CMD_BACKWARD,
+        left: CMD_LEFT,
+        right: CMD_RIGHT,
+    };
+
+    // Asignar eventos de INICIO de movimiento
+    for (const [name, command] of Object.entries(buttonMap)) {
+        buttons[name].addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(command); });
+        buttons[name].addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(command); });
+    }
+
+    // Asignar eventos de FIN de movimiento (enviar STOP)
+    const stopEvents = ['mouseup', 'touchend', 'mouseleave', 'touchcancel'];
+    for (const eventName of stopEvents) {
+        for (const name in buttonMap) {
+            buttons[name].addEventListener(eventName, (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+        }
+    }
+
+    // Asignar evento al botón STOP explícito
+    buttons.stop.addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+    buttons.stop.addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+
+
+    // Iniciar la conexión
+    connectWebSocket();
+</script>
+</body>
 </html>

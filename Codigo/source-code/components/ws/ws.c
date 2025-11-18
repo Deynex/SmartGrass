@@ -4,34 +4,43 @@
  * ======================================================================== */
 
 #include "ws.h"
-#include "esp_log.h"
+#include <esp_log.h>
 #include <string.h>
+#include "a4988.h" // Para los enums A4988_DUAL_...
 
 static const char *TAG = "WEBSOCKET";
 
+// --- Definiciones de Protocolo (Cliente -> ESP32) ---
+#define CMD_STOP 0x00
+#define CMD_FORWARD 0x01
+#define CMD_BACKWARD 0x02
+#define CMD_LEFT 0x03
+#define CMD_RIGHT 0x04
+// Velocidad fija en RPM para los comandos
+#define VEHICLE_CONTROL_SPEED 180.0f
+
+
 // --- Gestión de Clientes ---
+#define MAX_CLIENTS 5
 
-#define MAX_CLIENTS 5 // Número máximo de clientes WebSocket simultáneos
-
-// Estructura para gestionar los descriptores de socket (fd) de los clientes
 typedef struct {
     httpd_handle_t handle;
     int fds[MAX_CLIENTS];
 } ws_clients_t;
 
-// Variable global (estática) para almacenar los clientes
 static ws_clients_t s_clients = {
     .handle = NULL,
-    .fds = { -1, -1, -1, -1, -1 } // Inicializa todos como -1 (desconectado)
+    .fds = { -1, -1, -1, -1, -1 }
 };
 
-// Añade un cliente a la lista
+// Handle del vehículo, pasado desde main.c
+static vehicle_handle_t s_vehicle_handle = NULL;
+
 static void add_client(httpd_handle_t handle, int fd)
 {
     if (s_clients.handle == NULL) {
-        s_clients.handle = handle; // Guarda el handle del servidor la primera vez
+        s_clients.handle = handle;
     }
-    
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (s_clients.fds[i] == -1) {
             ESP_LOGI(TAG, "Cliente conectado, fd=%d, asignado al slot %d", fd, i);
@@ -40,22 +49,17 @@ static void add_client(httpd_handle_t handle, int fd)
         }
     }
     ESP_LOGW(TAG, "No hay slots libres para el cliente fd=%d", fd);
-    // Opcional: cerrar la conexión si no hay espacio
-    // httpd_sess_trigger_close(handle, fd); 
 }
 
-// Elimina un cliente de la lista
 static void remove_client(int fd)
 {
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (s_clients.fds[i] == fd) {
             ESP_LOGI(TAG, "Cliente desconectado, fd=%d, liberado del slot %d", fd, i);
             s_clients.fds[i] = -1;
-            break; // Salir del bucle una vez encontrado
+            break;
         }
     }
-    
-    // Si es el último cliente, limpiar el handle del servidor
     bool any_client_left = false;
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (s_clients.fds[i] != -1) {
@@ -68,61 +72,41 @@ static void remove_client(int fd)
     }
 }
 
+// --- Lógica de Envío Asíncrono (Telemetría) ---
 
-// --- Lógica de Envío Asíncrono ---
-
-// Estructura para pasar datos al worker queue
 struct async_send_arg {
     char* data;
     size_t len;
 };
 
-// Tarea que se ejecuta en el worker queue del servidor
 static void ws_async_send_task(void *arg)
 {
     struct async_send_arg *args = (struct async_send_arg *)arg;
-    
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.payload = (uint8_t*)args->data;
     ws_pkt.len = args->len;
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
 
-    // Enviar a TODOS los clientes conectados
     for (int i = 0; i < MAX_CLIENTS; i++) {
         if (s_clients.fds[i] != -1) {
-            esp_err_t ret = httpd_ws_send_frame_async(s_clients.handle, s_clients.fds[i], &ws_pkt);
-            if (ret != ESP_OK) {
-                ESP_LOGE(TAG, "Error enviando async a fd=%d: %s", s_clients.fds[i], esp_err_to_name(ret));
-                // Si falla, puede que el cliente se haya desconectado de forma abrupta
-                remove_client(s_clients.fds[i]); // Podríamos querer limpiarlo aquí
-            }
+            httpd_ws_send_frame_async(s_clients.handle, s_clients.fds[i], &ws_pkt);
         }
     }
-    
-    free(args->data); // Liberar la copia de los datos
-    free(args);       // Liberar el struct de argumentos
+    free(args->data);
+    free(args);
 }
 
-/**
- * @brief API pública para enviar texto (implementación)
- */
 esp_err_t ws_server_send_text_all(const char* data)
 {
-    if (data == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    if (s_clients.handle == NULL) {
-        ESP_LOGW(TAG, "No hay servidor o clientes conectados, no se puede enviar.");
-        return ESP_FAIL;
-    }
+    if (data == NULL) return ESP_ERR_INVALID_ARG;
+    if (s_clients.handle == NULL) return ESP_FAIL; // No hay clientes
 
     size_t len = strlen(data);
+    if (len == 0) return ESP_OK;
+
     struct async_send_arg *args = malloc(sizeof(struct async_send_arg));
-    if (args == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
+    if (args == NULL) return ESP_ERR_NO_MEM;
     
     args->data = malloc(len + 1); // +1 para NUL
     if (args->data == NULL) {
@@ -133,60 +117,85 @@ esp_err_t ws_server_send_text_all(const char* data)
     memcpy(args->data, data, len + 1);
     args->len = len;
 
-    // Encolar el trabajo
     esp_err_t ret = httpd_queue_work(s_clients.handle, ws_async_send_task, args);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "httpd_queue_work falló: %s", esp_err_to_name(ret));
         free(args->data);
         free(args);
     }
-    
     return ret;
 }
 
+// --- Handler Principal de WebSocket (Control) ---
 
-// --- Handler Principal de WebSocket ---
+static void handle_control_command(uint8_t cmd)
+{
+    if (s_vehicle_handle == NULL) {
+        ESP_LOGE(TAG, "Se recibió un comando pero el handle del vehículo es NULL");
+        return;
+    }
 
-/**
- * @brief Manejador para eventos de WebSocket
- */
+    switch (cmd)
+    {
+    case CMD_FORWARD:
+        ESP_LOGI(TAG, "Comando: AVANZAR");
+        vehicle_move(s_vehicle_handle, A4988_DUAL_FORWARD, VEHICLE_CONTROL_SPEED);
+        break;
+
+    case CMD_BACKWARD:
+        ESP_LOGI(TAG, "Comando: RETROCEDER");
+        vehicle_move(s_vehicle_handle, A4988_DUAL_BACKWARD, VEHICLE_CONTROL_SPEED);
+        break;
+
+    case CMD_LEFT:
+        ESP_LOGI(TAG, "Comando: IZQUIERDA");
+        vehicle_move(s_vehicle_handle, A4988_DUAL_LEFT, VEHICLE_CONTROL_SPEED);
+        break;
+
+    case CMD_RIGHT:
+        ESP_LOGI(TAG, "Comando: DERECHA");
+        vehicle_move(s_vehicle_handle, A4988_DUAL_RIGHT, VEHICLE_CONTROL_SPEED);
+        break;
+
+    case CMD_STOP:
+        ESP_LOGI(TAG, "Comando: DETENER");
+        vehicle_stop(s_vehicle_handle);
+        break;
+    
+    default:
+        ESP_LOGW(TAG, "Comando binario desconocido: 0x%02X", cmd);
+        break;
+    }
+}
+
 static esp_err_t ws_handler(httpd_req_t *req)
 {
-    // === 1. Handshake (Nueva conexión) ===
     if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "Handshake solicitado por cliente");
+        ESP_LOGI(TAG, "Handshake solicitado por cliente, fd=%d", httpd_req_to_sockfd(req));
         add_client(req->handle, httpd_req_to_sockfd(req));
         return ESP_OK;
     }
 
-    // === 2. Recepción de Paquetes ===
     httpd_ws_frame_t ws_pkt;
     uint8_t *buf = NULL;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
 
-    // 2.1. Obtener la longitud del frame
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK) {
-        // Error o desconexión abrupta
         ESP_LOGE(TAG, "httpd_ws_recv_frame (len) falló: %s", esp_err_to_name(ret));
         remove_client(httpd_req_to_sockfd(req));
         return ret;
     }
 
-    // 2.2. Manejar paquete de CIERRE (desconexión limpia)
     if (ws_pkt.type == HTTPD_WS_TYPE_CLOSE) {
-        ESP_LOGI(TAG, "Cliente envió paquete CLOSE");
+        ESP_LOGI(TAG, "Cliente envió paquete CLOSE, fd=%d", httpd_req_to_sockfd(req));
         remove_client(httpd_req_to_sockfd(req));
-        // Enviar paquete de cierre de vuelta
-        ws_pkt.payload = NULL;
-        ws_pkt.len = 0;
-        httpd_ws_send_frame(req, &ws_pkt);
+        httpd_ws_send_frame(req, &ws_pkt); // Enviar ACK de cierre
         return ESP_OK;
     }
     
-    // 2.3. Manejar paquete de TEXTO/DATOS
     if (ws_pkt.len > 0) {
-        buf = calloc(1, ws_pkt.len + 1); // +1 para el NUL
+        buf = calloc(1, ws_pkt.len + 1);
         if (buf == NULL) {
             ESP_LOGE(TAG, "Fallo al reservar memoria para el buffer del WS");
             return ESP_ERR_NO_MEM;
@@ -200,21 +209,17 @@ static esp_err_t ws_handler(httpd_req_t *req)
             return ret;
         }
 
-        ESP_LOGI(TAG, "Paquete recibido de fd=%d: [%s]", httpd_req_to_sockfd(req), ws_pkt.payload);
-
-        // --- ¡AQUÍ VA TU LÓGICA! ---
-        // Procesa el mensaje recibido en ws_pkt.payload (es un string C)
-        
-        // Ejemplo: Si recibes "Trigger async", envía un mensaje a todos
-        if (strcmp((char*)ws_pkt.payload, "Trigger async") == 0) {
-            free(buf); // Libera el buffer antes de llamar a la función que puede tardar
-            return ws_server_send_text_all("¡Envío asíncrono disparado!");
-        }
-
-        // Lógica de "Echo" (devuelve el mismo mensaje)
-        ret = httpd_ws_send_frame(req, &ws_pkt);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "httpd_ws_send_frame falló: %s", esp_err_to_name(ret));
+        // --- Procesar el paquete recibido ---
+        if (ws_pkt.type == HTTPD_WS_TYPE_BINARY) {
+            // Este es un comando de control
+            if (ws_pkt.len == 1) {
+                handle_control_command(ws_pkt.payload[0]);
+            } else {
+                ESP_LOGW(TAG, "Paquete binario de longitud inesperada: %d", ws_pkt.len);
+            }
+        } else if (ws_pkt.type == HTTPD_WS_TYPE_TEXT) {
+            // El cliente no debería enviar texto, pero lo logueamos si lo hace
+            ESP_LOGI(TAG, "Texto recibido de fd=%d: [%s]", httpd_req_to_sockfd(req), ws_pkt.payload);
         }
         
         free(buf);
@@ -225,22 +230,20 @@ static esp_err_t ws_handler(httpd_req_t *req)
 
 // --- Función de Registro de Handlers ---
 
-/**
- * @brief API pública para registrar handlers (implementación)
- */
-esp_err_t ws_server_register_handlers(httpd_handle_t server)
+esp_err_t ws_server_register_handlers(httpd_handle_t server, vehicle_handle_t vehicle)
 {
-    // Definición de la URI para el WebSocket
+    // Guardar el handle del vehículo para que ws_handler pueda usarlo
+    s_vehicle_handle = vehicle;
+
     static const httpd_uri_t ws_uri = {
-        .uri        = "/ws",      // Endpoint (ej. ws://192.168.2.1/ws)
+        .uri        = "/ws",
         .method     = HTTP_GET,
         .handler    = ws_handler,
         .user_ctx   = NULL,
-        .is_websocket = true     // ¡Importante!
+        .is_websocket = true
     };
     
-    // Inicializa la lista de clientes
-    s_clients.handle = server; // Guarda el handle
+    s_clients.handle = server;
     for (int i = 0; i < MAX_CLIENTS; i++) {
         s_clients.fds[i] = -1;
     }

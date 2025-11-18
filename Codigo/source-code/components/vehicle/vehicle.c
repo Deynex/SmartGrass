@@ -8,6 +8,7 @@
 #include "a4988.h"
 #include "mks_servo42c.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
 #include <stdlib.h>
 
 static const char *TAG = "VEHICLE";
@@ -197,6 +198,42 @@ esp_err_t vehicle_move(vehicle_handle_t handle, a4988_dual_direction_t direction
     handle->current_direction = direction;
     ESP_LOGI(TAG, "Vehículo moviéndose (Dir: %d, RPM: %.1f)", direction, rpm);
 
+    return ESP_OK;
+}
+
+esp_err_t vehicle_correct_drift(vehicle_handle_t handle)
+{
+    if (handle == NULL) return ESP_ERR_INVALID_ARG;
+
+    // Asegurarse de que el vehículo esté detenido antes de corregir
+    vehicle_stop(handle);
+    vTaskDelay(pdMS_TO_TICKS(100)); // Pequeña pausa
+
+    int32_t pulse_drift = 0;
+    if (!mks_read_pulses_received(&pulse_drift))
+    {
+        ESP_LOGE(TAG, "No se pudo leer el desfase de pulsos para corrección.");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Desfase de pulsos actual: %" PRId32, pulse_drift);
+
+    if (pulse_drift != 0)
+    {
+        uint8_t dir = (pulse_drift > 0) ? 0 : 1; // 0=CW, 1=CCW
+        uint32_t pulses_to_fix = (pulse_drift > 0) ? pulse_drift : -pulse_drift;
+
+        ESP_LOGI(TAG, "Corrigiendo desfase... Moviendo %" PRIu32 " pulsos en dirección %d", pulses_to_fix, dir);
+
+        // Usamos una velocidad baja (ej. 10 RPM) para una corrección precisa
+        if (!mks_move_relative_pulses(dir, 10, pulses_to_fix))
+        {
+            ESP_LOGE(TAG, "¡Fallo al corregir el desfase!");
+            return ESP_FAIL;
+        }
+    }
+    
+    ESP_LOGI(TAG, "Corrección de desfase completada.");
     return ESP_OK;
 }
 
