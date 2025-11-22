@@ -9,7 +9,7 @@
 
 #include "driver/gpio.h"
 #include "driver/ledc.h"
-#include "esp_err.h" // Para esp_err_t
+#include "esp_err.h"
 
 struct a4988_dual_handle_s;
 typedef struct a4988_dual_handle_s *a4988_dual_handle_t;

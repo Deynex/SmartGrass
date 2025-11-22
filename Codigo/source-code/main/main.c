@@ -24,7 +24,7 @@
 #define I2C_MASTER_SDA 21
 #define I2C_MASTER_NUM I2C_NUM_0
 
-// Pines del Vehículo
+// Pines del Vehículo para el A4988 Dual
 #define VEHICLE_STEP_PIN GPIO_NUM_23
 #define VEHICLE_DIR_LEFT GPIO_NUM_19
 #define VEHICLE_DIR_RIGHT GPIO_NUM_4
