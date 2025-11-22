@@ -17,7 +17,7 @@ static const char *TAG = "WEBSOCKET";
 #define CMD_LEFT 0x03
 #define CMD_RIGHT 0x04
 // Velocidad fija en RPM para los comandos
-#define VEHICLE_CONTROL_SPEED 180.0f
+#define VEHICLE_CONTROL_SPEED 50.0f
 
 
 // --- Gestión de Clientes ---
