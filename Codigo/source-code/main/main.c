@@ -50,8 +50,6 @@ vehicle_handle_t vehicle_handle = NULL;
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 void control_telemetry_task(void *pvParameters)
 {
-    ESP_LOGI(TAG, "Tarea de Control y Telemetría iniciada en Core 0.");
-
     // Variables para almacenar los datos
     int16_t accel_x_raw, accel_y_raw, accel_z_raw;
     int16_t temp_raw;
@@ -65,13 +63,13 @@ void control_telemetry_task(void *pvParameters)
 
     while (true)
     {
-        // 1. Leer todos los datos de los sensores
+        // Leer todos los datos de los sensores
         mpu6050_read_all_raw(mpu6050_handle, &accel_x_raw, &accel_y_raw, &accel_z_raw, &temp_raw, &gyro_x_raw, &gyro_y_raw, &gyro_z_raw);
         mks_read_encoder(&enc_data);
         mks_read_shaft_error_angle(&shaft_error);
         mks_get_status(&status);
 
-        // 2. Formatear los datos como un string JSON
+        // Formatear los datos como un string JSON
         snprintf(json_buffer, sizeof(json_buffer),
                  "{\"accel_x\": %d, \"accel_y\": %d, \"accel_z\": %d, "
                  "\"gyro_x\": %d, \"gyro_y\": %d, \"gyro_z\": %d, "
@@ -88,78 +86,55 @@ void control_telemetry_task(void *pvParameters)
         ws_server_send_text_all(json_buffer);
 
         // 4. Esperar al siguiente ciclo
-        vTaskDelay(pdMS_TO_TICKS(100)); // Enviar datos 10 veces por segundo
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
-
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-// Core 1: Movimiento (Demo - AHORA COMENTADA)
-// ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-/*
-void motors(void *pvParameters)
-{
-    ESP_LOGI(TAG, "Tarea de demo de motores iniciada en Core 1.");
-    vTaskDelay(pdMS_TO_TICKS(3000));
-
-    while (true)
-    {
-        ESP_LOGI(TAG, "Demo: AVANZAR");
-        vehicle_move(vehicle_handle, A4988_DUAL_FORWARD, 180.0);
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        ESP_LOGI(TAG, "Demo: DETENER");
-        vehicle_stop(vehicle_handle);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-
-        ESP_LOGI(TAG, "Demo: RETROCEDER");
-        vehicle_move(vehicle_handle, A4988_DUAL_BACKWARD, 180.0);
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        ESP_LOGI(TAG, "Demo: DETENER");
-        vehicle_stop(vehicle_handle);
-        vTaskDelay(pdMS_TO_TICKS(2000));
-    }
-}
-*/
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Main
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 void app_main(void)
 {
+    // Inicialización de I2C y MPU6050
     esp_err_t ret;
-
-    // --- 1. Inicializar I2C y MPU6050 ---
-    ESP_LOGI(TAG, "Inicializando bus I2C...");
     ret = i2c_master_bus_init(&i2c_bus_handle, I2C_MASTER_SDA, I2C_MASTER_SCL, I2C_MASTER_NUM);
+
     if (ret == ESP_OK)
     {
         ret = i2c_add_device(i2c_bus_handle, &mpu6050_handle, MPU6050_ADDR, MPU6050_I2C_FREQ_HZ);
     }
+
     if (ret == ESP_OK)
     {
         ret = mpu6050_init(mpu6050_handle);
     }
+
     if (ret == ESP_OK)
     {
         mpu6050_set_accel_range(mpu6050_handle, MPU6050_ACCEL_RANGE_2G);
         mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
     }
+
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "¡Falló la inicialización de I2C/MPU6050!");
         return;
     }
-    ESP_LOGI(TAG, "I2C y MPU6050 inicializados.");
 
-    // --- 2. Inicializar UART y MKS Servo ---
+    // Inicializar UART y MKS Servo
     uart_init();
-    vTaskDelay(pdMS_TO_TICKS(100)); // Pequeña pausa para que el UART se estabilice
+    vTaskDelay(pdMS_TO_TICKS(100));
     mks_init();
-    ESP_LOGI(TAG, "UART y MKS Servo inicializados.");
 
-    // --- 3. Inicializar Vehículo ---
-    ESP_LOGI(TAG, "Inicializando componente de vehículo...");
+    // Inicializar Red y Servidor
+    nvs_init();
+    wifi_init();
+
+    // Pasamos el vehicle_handle al servidor
+    // El servidor, a su vez, se lo pasará al módulo WebSocket
+    http_server_init(vehicle_handle);
+
+    // Inicializar Vehículo
     a4988_dual_config_t stepper_config = {
         .step_pin = VEHICLE_STEP_PIN,
         .dir_left_pin = VEHICLE_DIR_LEFT,
@@ -169,7 +144,9 @@ void app_main(void)
         .timer_num = VEHICLE_LEDC_TIMER,
         .channel_num = VEHICLE_LEDC_CHANNEL,
     };
-    vehicle_config_t vehicle_config = {.stepper_config = stepper_config};
+    vehicle_config_t vehicle_config = {
+        .stepper_config = stepper_config,
+    };
     ret = vehicle_init(&vehicle_config, &vehicle_handle);
     if (ret != ESP_OK)
     {
@@ -177,12 +154,8 @@ void app_main(void)
         return;
     }
     vehicle_enable(vehicle_handle);
-    ESP_LOGI(TAG, "Vehículo inicializado y habilitado.");
 
-    vTaskDelay(pdMS_TO_TICKS(10000)); // Pequeña pausa antes de calibrar
-
-    // --- 4. Calibrar Encoder MKS ---
-    ESP_LOGI(TAG, "Iniciando calibración de encoder MKS (puede tardar)...");
+    // Calibrar Encoder MKS
     if (!mks_calibrate_encoder())
     {
         ESP_LOGE(TAG, "Error durante la calibración del encoder");
@@ -192,20 +165,10 @@ void app_main(void)
         ESP_LOGI(TAG, "Calibración del encoder exitosa");
     }
 
-    // --- 5. Inicializar Red y Servidor ---
-    nvs_init();
-    wifi_init();
-
-    // Pasamos el vehicle_handle al servidor
-    // El servidor, a su vez, se lo pasará al módulo WebSocket
-    http_server_init(vehicle_handle);
-
-    // --- 6. Iniciar Tareas ---
+    // Iniciar Tareas
     ESP_LOGI(TAG, "Iniciando tareas de aplicación...");
     xTaskCreatePinnedToCore(control_telemetry_task, "control_telemetry", 4096, NULL, 5, NULL, PRO_CPU_NUM); // Core 0: Control & Telemetría
 
     // La tarea 'motors' ya no se inicia, el control es ahora por WebSocket
     // xTaskCreatePinnedToCore(motors, "motors", 4096, NULL, 5, NULL, APP_CPU_NUM);
-
-    ESP_LOGI(TAG, "Sistema listo. Conéctese al AP 'ESP_SOFTAP'");
 }
