@@ -34,7 +34,7 @@
 #define VEHICLE_LEDC_TIMER LEDC_TIMER_0
 #define VEHICLE_LEDC_CHANNEL LEDC_CHANNEL_0
 #define VEHICLE_STEPS_PER_REV 200
-#define VEHICLE_MICROSTEPS 1
+#define VEHICLE_MICROSTEPS 16
 #define VEHICLE_TOTAL_STEPS (VEHICLE_STEPS_PER_REV * VEHICLE_MICROSTEPS)
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -130,9 +130,15 @@ void app_main(void)
     nvs_init();
     wifi_init();
 
-    // Pasamos el vehicle_handle al servidor
-    // El servidor, a su vez, se lo pasará al módulo WebSocket
-    http_server_init(vehicle_handle);
+    // Calibrar Encoder MKS
+    if (!mks_calibrate_encoder())
+    {
+        ESP_LOGE(TAG, "Error durante la calibración del encoder");
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Calibración del encoder exitosa");
+    }
 
     // Inicializar Vehículo
     a4988_dual_config_t stepper_config = {
@@ -155,15 +161,9 @@ void app_main(void)
     }
     vehicle_enable(vehicle_handle);
 
-    // Calibrar Encoder MKS
-    if (!mks_calibrate_encoder())
-    {
-        ESP_LOGE(TAG, "Error durante la calibración del encoder");
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Calibración del encoder exitosa");
-    }
+    // Pasamos el vehicle_handle al servidor
+    // El servidor, a su vez, se lo pasará al módulo WebSocket
+    http_server_init(vehicle_handle);
 
     // Iniciar Tareas
     ESP_LOGI(TAG, "Iniciando tareas de aplicación...");
