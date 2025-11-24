@@ -26,8 +26,8 @@
 
 // Pines del Vehículo para el A4988 Dual
 #define VEHICLE_STEP_PIN GPIO_NUM_23
-#define VEHICLE_DIR_LEFT GPIO_NUM_19
-#define VEHICLE_DIR_RIGHT GPIO_NUM_4
+#define VEHICLE_DIR_LEFT GPIO_NUM_32
+#define VEHICLE_DIR_RIGHT GPIO_NUM_19
 #define VEHICLE_ENABLE_PIN GPIO_NUM_18
 
 // Configuración de hardware
