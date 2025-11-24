@@ -9,4 +9,5 @@ idf_component_register(SRCS "main.c"
                         soft_ap
                         uart
                         vehicle
+                        brushless
                     INCLUDE_DIRS ".")
