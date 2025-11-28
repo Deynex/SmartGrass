@@ -35,7 +35,7 @@
 #define VEHICLE_LEDC_TIMER LEDC_TIMER_0
 #define VEHICLE_LEDC_CHANNEL LEDC_CHANNEL_0
 #define VEHICLE_STEPS_PER_REV 200
-#define VEHICLE_MICROSTEPS 16
+#define VEHICLE_MICROSTEPS 8
 #define VEHICLE_TOTAL_STEPS (VEHICLE_STEPS_PER_REV * VEHICLE_MICROSTEPS)
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
