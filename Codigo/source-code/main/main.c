@@ -132,14 +132,14 @@ void app_main(void)
     wifi_init();
 
     // Calibrar Encoder MKS
-    if (!mks_calibrate_encoder())
+    /*if (!mks_calibrate_encoder())
     {
         ESP_LOGE(TAG, "Error durante la calibración del encoder");
     }
     else
     {
         ESP_LOGI(TAG, "Calibración del encoder exitosa");
-    }
+    }*/
 
     // Inicializar Vehículo
     a4988_dual_config_t stepper_config = {
