@@ -90,7 +90,7 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
         .speed_mode = LEDC_MODE,
         .timer_num = new_handle->timer_num,
         .duty_resolution = LEDC_DUTY_RES,
-        .freq_hz = 1000, // Frecuencia inicial
+        .freq_hz = 0, // Frecuencia inicial
         .clk_cfg = LEDC_AUTO_CLK,
     };
     esp_err_t ret = ledc_timer_config(&ledc_timer);
