@@ -20,18 +20,23 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background-color: #0d1117;
             color: #c9d1d9;
-            height: 100vh;
+            /* CAMBIO: Permitir scroll vertical y altura mínima */
+            min-height: 100vh;
             padding: 10px;
-            overflow: hidden;
+            overflow-x: hidden; /* Evitar scroll horizontal */
+            overflow-y: auto;   /* Permitir scroll vertical si no cabe */
         }
 
         .container {
             display: grid;
+            /* Por defecto (Desktop grande): 2 columnas */
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 10px;
-            height: calc(100vh - 20px);
-            max-width: 100%;
+            /* Altura automática para adaptarse al contenido */
+            grid-template-rows: auto auto; 
+            gap: 15px;
+            max-width: 1200px; /* Limitar ancho en pantallas muy grandes */
+            margin: 0 auto;    /* Centrar */
+            padding-bottom: 20px;
         }
 
         .panel {
@@ -39,27 +44,34 @@
             border: 1px solid #30363d;
             border-radius: 12px;
             padding: 15px;
-            overflow: auto;
             display: flex;
             flex-direction: column;
             position: relative;
+            /* Sombra suave para profundidad */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-
-        /* Scrollbar styling */
-        .panel::-webkit-scrollbar { width: 6px; }
-        .panel::-webkit-scrollbar-track { background: #0d1117; }
-        .panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
         .panel-top-left { grid-column: 1; grid-row: 1; }
         .panel-bottom-left { grid-column: 1; grid-row: 2; }
         .panel-right { grid-column: 2; grid-row: 1 / 3; }
         
-        @media (max-width: 768px) {
-            body { padding: 5px; overflow: auto; height: auto; min-height: 100vh; }
-            .container { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; gap: 10px; }
-            .panel-right { grid-column: 1; grid-row: 3; min-height: 350px; }
-            .panel-bottom-left { grid-column: 1; grid-row: 2; }
-            .panel-top-left { min-height: 300px; }
+        /* CAMBIO IMPORTANTÍSIMO: Breakpoint para Tablets y Móviles (aumentado a 1024px) */
+        @media (max-width: 1024px) {
+            body { padding: 5px; }
+            .container {
+                /* Cambiar a una sola columna para que todo quepa bien */
+                grid-template-columns: 1fr; 
+                grid-template-rows: auto;
+                gap: 15px;
+            }
+            
+            /* Reordenar paneles para flujo lógico en móvil/tablet */
+            .panel-top-left { grid-column: 1; grid-row: 1; } /* Telemetría primero */
+            .panel-right { grid-column: 1; grid-row: 2; }    /* Cuchilla segundo (Importante) */
+            .panel-bottom-left { grid-column: 1; grid-row: 3; } /* Control movimiento al final */
+            
+            /* Ajustar alturas mínimas para toque fácil */
+            .control-pad { min-height: 200px; }
         }
 
         .panel-title {
@@ -98,14 +110,14 @@
 
         .telemetry-rows {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            grid-template-columns: 1fr 1fr; /* Dos columnas de datos */
+            gap: 5px 15px;
         }
 
         .telemetry-item {
             display: flex;
             justify-content: space-between;
-            font-size: 13px;
+            font-size: 14px; /* Un poco más grande para legibilidad */
         }
         
         .telemetry-item .label { color: #8b949e; }
@@ -116,9 +128,9 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: 8px;
+            gap: 10px;
             flex-grow: 1;
-            min-height: 160px;
+            min-height: 180px; /* Más altura para dedos */
         }
         .control-button {
             display: flex;
@@ -127,15 +139,20 @@
             background-color: #21262d;
             border: 1px solid #30363d;
             border-radius: 8px;
-            font-size: 24px;
+            font-size: 28px; /* Iconos más grandes */
             cursor: pointer;
             transition: all 0.1s;
+            touch-action: manipulation; /* Mejor respuesta táctil */
         }
         .control-button:active { background-color: #58a6ff; color: #0d1117; transform: scale(0.95); }
         
         #btn-forward { grid-column: 2; grid-row: 1; }
         #btn-left { grid-column: 1; grid-row: 2; }
-        #btn-stop { grid-column: 2; grid-row: 2; background-color: #8b0000; border-color: #a11313; color: white;}
+        #btn-stop { 
+            grid-column: 2; grid-row: 2; 
+            background-color: #8b0000; border-color: #a11313; color: white;
+            font-size: 16px; font-weight: bold;
+        }
         #btn-right { grid-column: 3; grid-row: 2; }
         #btn-backward { grid-column: 2; grid-row: 3; }
 
@@ -168,6 +185,7 @@
             align-items: center;
             transition: all 0.3s;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            -webkit-tap-highlight-color: transparent;
         }
 
         .blade-button.active {
@@ -196,7 +214,7 @@
 
         /* Estado */
         .status-bar {
-            margin-top: auto;
+            margin-top: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -419,7 +437,7 @@
         if (bladeActive) {
             btnBlade.classList.add('active');
             bladeText.innerText = "ARMADO (ON)";
-            bladePwr.innerText = "60%"; // Valor hardcodeado en ws.c
+            bladePwr.innerText = "30%"; // Valor hardcodeado en ws.c
             bladePwr.style.color = "#2ea043";
         } else {
             btnBlade.classList.remove('active');
