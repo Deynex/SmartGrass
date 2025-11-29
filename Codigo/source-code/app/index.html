@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ESP32 Vehicle Control</title>
+    <title>ESP32 Lawn Mower</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-user-select: none; /* Evitar selección de texto */
+            -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            -webkit-tap-highlight-color: transparent; /* Evitar flash en móviles */
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -38,117 +38,87 @@
             background-color: #161b22;
             border: 1px solid #30363d;
             border-radius: 12px;
-            padding: 20px;
+            padding: 15px;
             overflow: auto;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
-        .panel-top-left {
-            grid-column: 1;
-            grid-row: 1;
-        }
+        /* Scrollbar styling */
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-track { background: #0d1117; }
+        .panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
-        .panel-bottom-left {
-            grid-column: 1;
-            grid-row: 2;
-        }
-
-        .panel-right {
-            grid-column: 2;
-            grid-row: 1 / 3;
-        }
+        .panel-top-left { grid-column: 1; grid-row: 1; }
+        .panel-bottom-left { grid-column: 1; grid-row: 2; }
+        .panel-right { grid-column: 2; grid-row: 1 / 3; }
         
-        /* Adaptación para móviles (columnas apiladas) */
         @media (max-width: 768px) {
-            body {
-                padding: 5px;
-                overflow: auto; /* Permitir scroll en móvil */
-                height: auto;
-                min-height: 100vh;
-            }
-            .container {
-                grid-template-columns: 1fr; /* Una sola columna */
-                grid-template-rows: auto; /* Altura automática */
-                height: auto;
-                gap: 10px;
-            }
-            .panel-right {
-                grid-column: 1;
-                grid-row: 3; /* El panel derecho va al final */
-                min-height: 300px;
-            }
-            .panel-bottom-left {
-                grid-column: 1;
-                grid-row: 2;
-            }
+            body { padding: 5px; overflow: auto; height: auto; min-height: 100vh; }
+            .container { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; gap: 10px; }
+            .panel-right { grid-column: 1; grid-row: 3; min-height: 350px; }
+            .panel-bottom-left { grid-column: 1; grid-row: 2; }
+            .panel-top-left { min-height: 300px; }
         }
-
-
-        .panel::-webkit-scrollbar { width: 8px; }
-        .panel::-webkit-scrollbar-track { background: #0d1117; border-radius: 4px; }
-        .panel::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-        .panel::-webkit-scrollbar-thumb:hover { background: #484f58; }
 
         .panel-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             color: #58a6ff;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
             border-bottom: 1px solid #30363d;
-            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* --- Panel de Telemetría --- */
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
-            flex-grow: 1;
-            overflow: auto;
-            padding-top: 5px;
+        /* --- Telemetría Avanzada --- */
+        .telemetry-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
+        
         .telemetry-group {
-            background-color: #0d1117;
-            border-radius: 8px;
-            padding: 10px;
+            background: #21262d;
+            border-radius: 6px;
+            padding: 8px;
             border: 1px solid #30363d;
         }
+        
         .telemetry-group h4 {
-            font-size: 14px;
+            font-size: 12px;
             color: #8b949e;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+
+        .telemetry-rows {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
         .telemetry-item {
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .telemetry-item .label {
-            color: #c9d1d9;
-        }
-        .telemetry-item .value {
-            font-weight: 600;
-            color: #f0f6fc;
-            min-width: 40px;
-            text-align: right;
-        }
-        .value.unit {
-            color: #8b949e;
-            font-weight: normal;
-            margin-left: 4px;
+            font-size: 13px;
         }
         
-        /* --- Panel de Control --- */
+        .telemetry-item .label { color: #8b949e; }
+        .telemetry-item .value { font-weight: 600; color: #f0f6fc; font-family: 'Consolas', monospace; }
+        
+        /* --- Control de Movimiento --- */
         .control-pad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
             flex-grow: 1;
-            min-height: 150px;
+            min-height: 160px;
         }
         .control-button {
             display: flex;
@@ -156,239 +126,316 @@
             align-items: center;
             background-color: #21262d;
             border: 1px solid #30363d;
-            border-radius: 10px;
+            border-radius: 8px;
             font-size: 24px;
             cursor: pointer;
-            transition: background-color 0.1s ease, transform 0.1s ease;
+            transition: all 0.1s;
         }
-        .control-button:active {
-            background-color: #58a6ff;
-            color: #0d1117;
-            transform: scale(0.95);
-        }
+        .control-button:active { background-color: #58a6ff; color: #0d1117; transform: scale(0.95); }
         
         #btn-forward { grid-column: 2; grid-row: 1; }
         #btn-left { grid-column: 1; grid-row: 2; }
-        #btn-stop { grid-column: 2; grid-row: 2; background-color: #8b0000; border-color: #a11313; }
+        #btn-stop { grid-column: 2; grid-row: 2; background-color: #8b0000; border-color: #a11313; color: white;}
         #btn-right { grid-column: 3; grid-row: 2; }
         #btn-backward { grid-column: 2; grid-row: 3; }
 
-        /* --- Panel de Estado --- */
-        .status-light {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background-color: #8b0000; /* Rojo por defecto */
+        /* --- Control de Cuchilla (Panel Derecho) --- */
+        .blade-control {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: #0d1117;
+            border-radius: 10px;
             border: 1px solid #30363d;
-            margin-right: 10px;
-            transition: background-color 0.5s ease;
         }
-        .status-light.connected {
-            background-color: #238636; /* Verde */
+
+        .blade-button {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 4px solid #30363d;
+            background: #21262d;
+            color: #8b949e;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .status-container {
+
+        .blade-button.active {
+            border-color: #238636;
+            background: #2ea043; /* Verde activado */
+            color: white;
+            box-shadow: 0 0 20px rgba(46, 160, 67, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        .blade-button i { font-size: 32px; margin-bottom: 5px; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .warning-text {
+            color: #e3b341;
+            font-size: 12px;
+            margin-top: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Estado */
+        .status-bar {
+            margin-top: auto;
             display: flex;
             align-items: center;
-            font-size: 16px;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #30363d;
         }
+        .status-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #8b0000;
+        }
+        .status-light.connected { background-color: #238636; }
+        
+        .blade-info {
+            width: 100%;
+            margin-top: 20px;
+        }
+
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Panel de Telemetría -->
+        <!-- Telemetría Detallada -->
         <div class="panel panel-top-left">
             <div class="panel-title">Telemetría</div>
-            <div class="telemetry-grid">
+            <div class="telemetry-section">
+                
+                <!-- Grupo IMU -->
                 <div class="telemetry-group">
-                    <h4>MPU - Acelerómetro</h4>
-                    <div class="telemetry-item"><span class="label">Accel X:</span> <span class="value" id="accel_x">0</span></div>
-                    <div class="telemetry-item"><span class="label">Accel Y:</span> <span class="value" id="accel_y">0</span></div>
-                    <div class="telemetry-item"><span class="label">Accel Z:</span> <span class="value" id="accel_z">0</span></div>
+                    <h4>IMU (MPU6050)</h4>
+                    <div class="telemetry-rows">
+                        <div class="telemetry-item"><span class="label">Accel X:</span> <span class="value" id="accel_x">0</span></div>
+                        <div class="telemetry-item"><span class="label">Gyro X:</span> <span class="value" id="gyro_x">0</span></div>
+                        <div class="telemetry-item"><span class="label">Accel Y:</span> <span class="value" id="accel_y">0</span></div>
+                        <div class="telemetry-item"><span class="label">Gyro Y:</span> <span class="value" id="gyro_y">0</span></div>
+                        <div class="telemetry-item"><span class="label">Accel Z:</span> <span class="value" id="accel_z">0</span></div>
+                        <div class="telemetry-item"><span class="label">Gyro Z:</span> <span class="value" id="gyro_z">0</span></div>
+                        <div class="telemetry-item"><span class="label">Pitch:</span> <span class="value" id="pitch">0</span>°</div>
+                        <div class="telemetry-item"><span class="label">Roll:</span> <span class="value" id="roll">0</span>°</div>
+                    </div>
                 </div>
+
+                <!-- Grupo Motor/Encoder -->
                 <div class="telemetry-group">
-                    <h4>MPU - Giroscopio</h4>
-                    <div class="telemetry-item"><span class="label">Gyro X:</span> <span class="value" id="gyro_x">0</span></div>
-                    <div class="telemetry-item"><span class="label">Gyro Y:</span> <span class="value" id="gyro_y">0</span></div>
-                    <div class="telemetry-item"><span class="label">Gyro Z:</span> <span class="value" id="gyro_z">0</span></div>
+                    <h4>Tracción (MKS Servo)</h4>
+                    <div class="telemetry-rows">
+                        <div class="telemetry-item"><span class="label">Angle:</span> <span class="value" id="enc_angle">0.0</span>°</div>
+                        <div class="telemetry-item"><span class="label">Error:</span> <span class="value" id="shaft_error">0.0</span>°</div>
+                        <div class="telemetry-item"><span class="label">Total:</span> <span class="value" id="enc_total">0.0</span>°</div>
+                        <div class="telemetry-item"><span class="label">Vueltas:</span> <span class="value" id="enc_carry">0</span></div>
+                        <div class="telemetry-item"><span class="label">Speed:</span> <span class="value" id="motor_speed">0</span> RPM</div>
+                        <div class="telemetry-item"><span class="label">Current:</span> <span class="value" id="motor_current">0</span> mA</div>
+                    </div>
                 </div>
+
+                <!-- Grupo Sistema -->
                 <div class="telemetry-group">
-                    <h4>MKS Encoder</h4>
-                    <div class="telemetry-item"><span class="label">Ángulo:</span> <span class="value" id="enc_angle">0.00</span><span class="value unit">°</span></div>
-                    <div class="telemetry-item"><span class="label">Total:</span> <span class="value" id="enc_total">0.00</span><span class="value unit">°</span></div>
-                    <div class="telemetry-item"><span class="label">Vueltas:</span> <span class="value" id="enc_carry">0</span></div>
+                    <h4>Sistema</h4>
+                    <div class="telemetry-rows">
+                        <div class="telemetry-item"><span class="label">Temp:</span> <span class="value" id="temp">0.0</span> °C</div>
+                        <div class="telemetry-item"><span class="label">Estado:</span> <span class="value" style="color:#238636">OK</span></div>
+                    </div>
                 </div>
-                <div class="telemetry-group">
-                    <h4>Estado Vehículo</h4>
-                    <div class="telemetry-item"><span class="label">Temp MPU:</span> <span class="value" id="temp">0</span><span class="value unit">°C</span></div>
-                    <div class="telemetry-item"><span class="label">Velocidad:</span> <span class="value" id="motor_speed">0</span><span class="value unit">RPM</span></div>
-                    <div class="telemetry-item"><span class="label">Corriente:</span> <span class="value" id="motor_current">0</span><span class="value unit">mA</span></div>
-                    <div class="telemetry-item"><span class="label">Error Eje:</span> <span class="value" id="shaft_error">0.00</span><span class="value unit">°</span></div>
-                </div>
+
             </div>
         </div>
         
-        <!-- Panel de Control -->
+        <!-- Control Movimiento -->
         <div class="panel panel-bottom-left">
-            <div class="panel-title">Control Manual</div>
+            <div class="panel-title">Control de Tracción</div>
             <div class="control-pad">
                 <div class="control-button" id="btn-forward">▲</div>
                 <div class="control-button" id="btn-left">◀</div>
-                <div class="control-button" id="btn-stop">■</div>
+                <div class="control-button" id="btn-stop">STOP</div>
                 <div class="control-button" id="btn-right">▶</div>
                 <div class="control-button" id="btn-backward">▼</div>
             </div>
         </div>
         
-        <!-- Panel de Estado/Log -->
+        <!-- Control Cuchilla -->
         <div class="panel panel-right">
-            <div class="panel-title">Estado de Conexión</div>
-            <div class="status-container">
+            <div class="panel-title">Sistema de Corte</div>
+            
+            <div class="blade-control">
+                <button id="btn-blade" class="blade-button">
+                    <span style="font-size: 30px;">☢</span>
+                    <span style="margin: 5px 0;">CUCHILLA</span>
+                    <span id="blade-status-text" style="font-size: 14px; font-weight: normal; opacity: 0.8;">OFF</span>
+                </button>
+                <div class="warning-text">¡PELIGRO! ALTA VELOCIDAD</div>
+            </div>
+
+            <div class="blade-info telemetry-group">
+                <h4>Estado Cuchilla</h4>
+                <div class="telemetry-item"><span class="label">Potencia:</span> <span class="value" id="blade-pwr">0%</span></div>
+                <div class="telemetry-item"><span class="label">Modo:</span> <span class="value">Manual</span></div>
+            </div>
+
+            <div class="status-bar">
                 <div class="status-light" id="status-light"></div>
                 <span id="status-text">Desconectado</span>
             </div>
-            <!-- Aquí se podría agregar un log de eventos -->
         </div>
     </div>
 
 <script>
-    // --- Comandos (Cliente -> ESP32) ---
-    // Protocolo de 1 byte
+    // Comandos Binarios (Protocolo)
     const CMD_STOP = 0x00;
     const CMD_FORWARD = 0x01;
     const CMD_BACKWARD = 0x02;
     const CMD_LEFT = 0x03;
     const CMD_RIGHT = 0x04;
-
-    // --- Elementos del DOM ---
-    const statusLight = document.getElementById('status-light');
-    const statusText = document.getElementById('status-text');
-    
-    // Telemetría
-    const telemetryFields = {
-        accel_x: document.getElementById('accel_x'),
-        accel_y: document.getElementById('accel_y'),
-        accel_z: document.getElementById('accel_z'),
-        gyro_x: document.getElementById('gyro_x'),
-        gyro_y: document.getElementById('gyro_y'),
-        gyro_z: document.getElementById('gyro_z'),
-        enc_angle: document.getElementById('enc_angle'),
-        enc_total: document.getElementById('enc_total'),
-        enc_carry: document.getElementById('enc_carry'),
-        temp: document.getElementById('temp'),
-        motor_speed: document.getElementById('motor_speed'),
-        motor_current: document.getElementById('motor_current'),
-        shaft_error: document.getElementById('shaft_error'),
-    };
-
-    // Botones de control
-    const buttons = {
-        forward: document.getElementById('btn-forward'),
-        backward: document.getElementById('btn-backward'),
-        left: document.getElementById('btn-left'),
-        right: document.getElementById('btn-right'),
-        stop: document.getElementById('btn-stop'),
-    };
+    const CMD_BLADE_ON = 0x05;
+    const CMD_BLADE_OFF = 0x06;
 
     let socket;
+    let bladeActive = false;
+
+    // UI Elements
+    const statusLight = document.getElementById('status-light');
+    const statusText = document.getElementById('status-text');
+    const btnBlade = document.getElementById('btn-blade');
+    const bladeText = document.getElementById('blade-status-text');
+    const bladePwr = document.getElementById('blade-pwr');
+
+    // Mapeo de IDs de HTML a claves del JSON
+    const uiMap = {
+        'accel_x': 'accel_x', 'accel_y': 'accel_y', 'accel_z': 'accel_z',
+        'gyro_x': 'gyro_x', 'gyro_y': 'gyro_y', 'gyro_z': 'gyro_z',
+        'temp': 'temp', 
+        'enc_angle': 'enc_angle', 'enc_total': 'enc_total', 'enc_carry': 'enc_carry', 'shaft_error': 'shaft_error',
+        'motor_speed': 'motor_speed', 'motor_current': 'motor_current'
+    };
 
     function connectWebSocket() {
         const ws_url = "ws://" + window.location.host + "/ws";
-        console.log("Intentando conectar WebSocket a:", ws_url);
-        
         socket = new WebSocket(ws_url);
-        socket.binaryType = "arraybuffer"; // Importante para enviar bytes
+        socket.binaryType = "arraybuffer";
 
         socket.onopen = () => {
-            console.log("[open] Conexión establecida");
             statusLight.classList.add('connected');
             statusText.innerText = "Conectado";
         };
 
         socket.onmessage = (event) => {
-            // Esperamos que la telemetría venga como texto (JSON)
             if (typeof event.data === 'string') {
                 try {
-                    const telemetry = JSON.parse(event.data);
-                    updateTelemetryUI(telemetry);
-                } catch (e) {
-                    console.error("Error al parsear JSON de telemetría:", e);
-                }
-            } else {
-                // Manejar datos binarios si es necesario (ej. logs)
-                console.log("[message] Datos binarios recibidos (no esperado):", event.data);
+                    const data = JSON.parse(event.data);
+                    updateTelemetry(data);
+                } catch (e) { console.error(e); }
             }
         };
 
-        socket.onclose = (event) => {
-            console.log('[close] Conexión perdida. Intentando reconectar...');
+        socket.onclose = () => {
             statusLight.classList.remove('connected');
             statusText.innerText = "Reconectando...";
+            // Seguridad: Asumir cuchilla apagada si se pierde conexión
+            if (bladeActive) toggleBladeUI(false);
             setTimeout(connectWebSocket, 3000);
         };
-
-        socket.onerror = (error) => {
-            console.error(`[error] ${error.message}`);
-            statusText.innerText = "Error de conexión";
-            socket.close();
-        };
     }
 
-    function updateTelemetryUI(data) {
-        // Itera sobre las claves del JSON y actualiza el HTML
-        for (const key in data) {
-            if (telemetryFields[key]) {
-                let value = data[key];
-                // Formatear números flotantes a 2 decimales
-                if (typeof value === 'number' && !Number.isInteger(value)) {
-                    value = value.toFixed(2);
+    function updateTelemetry(data) {
+        // Actualizar campos directos
+        for (const [id, key] of Object.entries(uiMap)) {
+            const el = document.getElementById(id);
+            if (el && data[key] !== undefined) {
+                // Formateo especial para flotantes
+                if (typeof data[key] === 'number' && !Number.isInteger(data[key])) {
+                    el.innerText = data[key].toFixed(1);
+                } else {
+                    el.innerText = data[key];
                 }
-                telemetryFields[key].innerText = value;
             }
         }
-    }
-
-    function sendCommand(commandByte) {
-        if (socket && socket.readyState === WebSocket.OPEN) {
-            const command = new Uint8Array([commandByte]);
-            socket.send(command.buffer);
-            console.log("Comando enviado:", commandByte);
-        } else {
-            console.log("WebSocket no está conectado. No se envió el comando.");
+        
+        // Calculo de Pitch/Roll (Aproximación con Acelerómetro)
+        if(data.accel_z !== undefined) {
+            let ax = data.accel_x, ay = data.accel_y, az = data.accel_z;
+            let pitch = Math.atan2(ay, Math.sqrt(ax*ax + az*az)) * 57.29;
+            let roll = Math.atan2(-ax, Math.sqrt(ay*ay + az*az)) * 57.29;
+            document.getElementById('pitch').innerText = pitch.toFixed(0);
+            document.getElementById('roll').innerText = roll.toFixed(0);
         }
     }
 
-    // --- Asignar Eventos de Control ---
-    // Usamos 'mousedown' y 'touchstart' para iniciar el movimiento
-    // Usamos 'mouseup' y 'touchend' para detener el movimiento
-    
-    // Mapeo de botones a comandos
-    const buttonMap = {
-        forward: CMD_FORWARD,
-        backward: CMD_BACKWARD,
-        left: CMD_LEFT,
-        right: CMD_RIGHT,
+    function sendCommand(byte) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(new Uint8Array([byte]));
+        }
+    }
+
+    // --- Control Movimiento (Momentáneo) ---
+    const buttons = {
+        'btn-forward': CMD_FORWARD, 'btn-backward': CMD_BACKWARD,
+        'btn-left': CMD_LEFT, 'btn-right': CMD_RIGHT
     };
 
-    // Asignar eventos de INICIO de movimiento
-    for (const [name, command] of Object.entries(buttonMap)) {
-        buttons[name].addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(command); });
-        buttons[name].addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(command); });
+    for (const [id, cmd] of Object.entries(buttons)) {
+        const btn = document.getElementById(id);
+        // Inicio Movimiento
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(cmd); });
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(cmd); });
+        // Fin Movimiento
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
     }
 
-    // Asignar eventos de FIN de movimiento (enviar STOP)
-    const stopEvents = ['mouseup', 'touchend', 'mouseleave', 'touchcancel'];
-    for (const eventName of stopEvents) {
-        for (const name in buttonMap) {
-            buttons[name].addEventListener(eventName, (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+    // Botón STOP (Detiene todo)
+    document.getElementById('btn-stop').addEventListener('click', () => {
+        sendCommand(CMD_STOP);
+        if (bladeActive) toggleBladeUI(false); 
+        sendCommand(CMD_BLADE_OFF);
+    });
+
+    // --- Control Cuchilla (Toggle) ---
+    function toggleBladeUI(active) {
+        bladeActive = active;
+        if (bladeActive) {
+            btnBlade.classList.add('active');
+            bladeText.innerText = "ARMADO (ON)";
+            bladePwr.innerText = "60%"; // Valor hardcodeado en ws.c
+            bladePwr.style.color = "#2ea043";
+        } else {
+            btnBlade.classList.remove('active');
+            bladeText.innerText = "OFF";
+            bladePwr.innerText = "0%";
+            bladePwr.style.color = "#f0f6fc";
         }
     }
 
-    // Asignar evento al botón STOP explícito
-    buttons.stop.addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
-    buttons.stop.addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
+    btnBlade.addEventListener('click', (e) => {
+        e.preventDefault();
+        const newState = !bladeActive;
+        toggleBladeUI(newState);
+        sendCommand(newState ? CMD_BLADE_ON : CMD_BLADE_OFF);
+    });
 
-
-    // Iniciar la conexión
     connectWebSocket();
 </script>
 </body>

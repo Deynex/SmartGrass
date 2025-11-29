@@ -20,22 +20,29 @@
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 // MARK: Definiciones
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-// Bus I2C
+// I2C
 #define I2C_MASTER_SCL 22
 #define I2C_MASTER_SDA 21
 #define I2C_MASTER_NUM I2C_NUM_0
 
-// Pines del Vehículo para el A4988 Dual
+// Pines Vehículo (A4988)
 #define VEHICLE_STEP_PIN GPIO_NUM_23
 #define VEHICLE_DIR_LEFT GPIO_NUM_32
 #define VEHICLE_DIR_RIGHT GPIO_NUM_19
 #define VEHICLE_ENABLE_PIN GPIO_NUM_18
 
-// Configuración de hardware
+// Pines Cuchilla (Brushless)
+#define BLADE_GPIO_PIN GPIO_NUM_25 // Elegimos GPIO 25 para la señal ESC
+
+// Configuración Hardware
+// Timer 0 para Ruedas (A4988), Timer 1 para Cuchilla (Brushless)
 #define VEHICLE_LEDC_TIMER LEDC_TIMER_0
 #define VEHICLE_LEDC_CHANNEL LEDC_CHANNEL_0
+#define BLADE_LEDC_TIMER LEDC_TIMER_1
+#define BLADE_LEDC_CHANNEL LEDC_CHANNEL_1
+
 #define VEHICLE_STEPS_PER_REV 200
-#define VEHICLE_MICROSTEPS 8
+#define VEHICLE_MICROSTEPS 2
 #define VEHICLE_TOTAL_STEPS (VEHICLE_STEPS_PER_REV * VEHICLE_MICROSTEPS)
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -51,43 +58,50 @@ vehicle_handle_t vehicle_handle = NULL;
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 void control_telemetry_task(void *pvParameters)
 {
-    // Variables para almacenar los datos
-    int16_t accel_x_raw, accel_y_raw, accel_z_raw;
+    // Variables locales para sensores
+    int16_t ax, ay, az;
     int16_t temp_raw;
-    int16_t gyro_x_raw, gyro_y_raw, gyro_z_raw;
-    mks_encoder_data_t enc_data;
-    mks_status_t status;
+    int16_t gx, gy, gz;
+    
+    // Variables para encoder y motor
+    mks_encoder_data_t enc;
+    mks_status_t st;
     float shaft_error;
-
-    // Buffer para construir el string JSON
-    char json_buffer[512]; // Aumentado para asegurar que quepa todo
+    
+    char json_buffer[512];
 
     while (true)
     {
-        // Leer todos los datos de los sensores
-        mpu6050_read_all_raw(mpu6050_handle, &accel_x_raw, &accel_y_raw, &accel_z_raw, &temp_raw, &gyro_x_raw, &gyro_y_raw, &gyro_z_raw);
-        mks_read_encoder(&enc_data);
+        // 1. Leer sensores
+        mpu6050_read_all_raw(mpu6050_handle, &ax, &ay, &az, &temp_raw, &gx, &gy, &gz);
+        mks_read_encoder(&enc);
         mks_read_shaft_error_angle(&shaft_error);
-        mks_get_status(&status);
+        mks_get_status(&st);
 
-        // Formatear los datos como un string JSON
+        // Convertir temperatura a grados Celsius para enviarla lista para mostrar
+        float temp_c = (temp_raw / 340.0f) + 36.53f;
+
+        // 2. Construir JSON completo con TODOS los datos
         snprintf(json_buffer, sizeof(json_buffer),
-                 "{\"accel_x\": %d, \"accel_y\": %d, \"accel_z\": %d, "
+                 "{"
+                 "\"accel_x\": %d, \"accel_y\": %d, \"accel_z\": %d, "
                  "\"gyro_x\": %d, \"gyro_y\": %d, \"gyro_z\": %d, "
-                 "\"temp\": %d, \"enc_angle\": %.2f, \"enc_total\": %.2f, "
-                 "\"enc_carry\": %" PRId32 ", \"shaft_error\": %.2f, "
-                 "\"motor_speed\": %d, \"motor_current\": %d}",
-                 accel_x_raw, accel_y_raw, accel_z_raw,
-                 gyro_x_raw, gyro_y_raw, gyro_z_raw,
-                 temp_raw, enc_data.angle_deg, enc_data.total_angle,
-                 enc_data.carry, shaft_error,
-                 status.speed, status.current);
+                 "\"temp\": %.1f, "
+                 "\"enc_angle\": %.2f, \"enc_total\": %.2f, \"enc_carry\": %" PRId32 ", "
+                 "\"shaft_error\": %.2f, "
+                 "\"motor_speed\": %d, \"motor_current\": %d"
+                 "}",
+                 ax, ay, az,
+                 gx, gy, gz,
+                 temp_c,
+                 enc.angle_deg, enc.total_angle, enc.carry,
+                 shaft_error,
+                 st.speed, st.current);
 
-        // 3. Enviar el JSON a todos los clientes WebSocket conectados
+        // 3. Enviar por WebSocket
         ws_server_send_text_all(json_buffer);
 
-        // 4. Esperar al siguiente ciclo
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -122,27 +136,19 @@ void app_main(void)
         return;
     }
 
-    // Inicializar UART y MKS Servo
+    // UART MKS
     uart_init();
     vTaskDelay(pdMS_TO_TICKS(100));
     mks_init();
 
-    // Inicializar Red y Servidor
+    // WiFi
     nvs_init();
     wifi_init();
 
-    // Calibrar Encoder MKS
-    /*if (!mks_calibrate_encoder())
-    {
-        ESP_LOGE(TAG, "Error durante la calibración del encoder");
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Calibración del encoder exitosa");
-    }*/
-
-    // Inicializar Vehículo
-    a4988_dual_config_t stepper_config = {
+    // Configurar Vehículo (Ruedas + Cuchilla)
+    
+    // Config Ruedas
+    a4988_dual_config_t stepper_cfg = {
         .step_pin = VEHICLE_STEP_PIN,
         .dir_left_pin = VEHICLE_DIR_LEFT,
         .dir_right_pin = VEHICLE_DIR_RIGHT,
@@ -151,25 +157,33 @@ void app_main(void)
         .timer_num = VEHICLE_LEDC_TIMER,
         .channel_num = VEHICLE_LEDC_CHANNEL,
     };
-    vehicle_config_t vehicle_config = {
-        .stepper_config = stepper_config,
+
+    // Config Cuchilla
+    brushless_config_t blade_cfg = {
+        .gpio_num = BLADE_GPIO_PIN,
+        .timer_num = BLADE_LEDC_TIMER,
+        .channel_num = BLADE_LEDC_CHANNEL,
+        .speed_mode = LEDC_LOW_SPEED_MODE
     };
-    ret = vehicle_init(&vehicle_config, &vehicle_handle);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "¡Falló la inicialización del componente de vehículo!");
+
+    vehicle_config_t vehicle_cfg = {
+        .stepper_config = stepper_cfg,
+        .brushless_config = blade_cfg
+    };
+
+    // Inicializar y Habilitar
+    ret = vehicle_init(&vehicle_cfg, &vehicle_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Fallo init vehículo");
         return;
     }
+    
+    // Esto armará el ESC (esperar pitidos)
     vehicle_enable(vehicle_handle);
 
-    // Pasamos el vehicle_handle al servidor
-    // El servidor, a su vez, se lo pasará al módulo WebSocket
+    // Servidor Web
     http_server_init(vehicle_handle);
 
-    // Iniciar Tareas
-    ESP_LOGI(TAG, "Iniciando tareas de aplicación...");
-    xTaskCreatePinnedToCore(control_telemetry_task, "control_telemetry", 4096, NULL, 5, NULL, PRO_CPU_NUM); // Core 0: Control & Telemetría
-
-    // La tarea 'motors' ya no se inicia, el control es ahora por WebSocket
-    // xTaskCreatePinnedToCore(motors, "motors", 4096, NULL, 5, NULL, APP_CPU_NUM);
+    // Tareas
+    xTaskCreatePinnedToCore(control_telemetry_task, "control_telemetry", 4096, NULL, 5, NULL, PRO_CPU_NUM);
 }

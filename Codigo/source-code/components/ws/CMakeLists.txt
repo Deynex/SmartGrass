@@ -3,4 +3,5 @@ idf_component_register(SRCS "ws.c"
                         esp_http_server
                         a4988
                         vehicle
+                        brushless
                     INCLUDE_DIRS "include")
