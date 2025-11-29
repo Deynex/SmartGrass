@@ -27,9 +27,9 @@ i2c_master_dev_handle_t mpu6050_handle;
 vehicle_handle_t vehicle_handle = NULL;
 
 // ===============================================================================================================================================================
-// MARK: Core 0: Control
+// MARK: Core 1: Telemetría
 // ===============================================================================================================================================================
-void control_telemetry_task(void *pvParameters)
+void telemetry_task(void *pvParameters)
 {
     // Variables locales para sensores
     int16_t ax, ay, az;
@@ -99,7 +99,7 @@ void app_main(void)
 
     if (ret == ESP_OK)
     {
-        mpu6050_set_accel_range(mpu6050_handle, MPU6050_ACCEL_RANGE_2G);
+        mpu6050_set_accel_range(mpu6050_handle, MPU6050_ACCEL_RANGE_4G);
         mpu6050_set_gyro_range(mpu6050_handle, MPU6050_GYRO_RANGE_250DPS);
     }
 
@@ -156,5 +156,5 @@ void app_main(void)
     http_server_init(vehicle_handle);
 
     // Tareas
-    xTaskCreatePinnedToCore(control_telemetry_task, "control_telemetry", 4096, NULL, 5, NULL, PRO_CPU_NUM);
+    xTaskCreatePinnedToCore(telemetry_task, "telemetry_task", 4096, NULL, 5, NULL, APP_CPU_NUM);
 }
