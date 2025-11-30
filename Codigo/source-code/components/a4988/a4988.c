@@ -23,7 +23,7 @@ static const char *TAG = "A4988";
  */
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES LEDC_TIMER_13_BIT        // Resolución de 13 bits que ofrece un duty suficientemente fino
-#define LEDC_DUTY (0.1 * (1 << LEDC_DUTY_RES)) // Ciclo de trabajo aprox. 8.5% para pulsos nítidos sin sobrecargar el driver
+#define LEDC_DUTY (0.1 * (1 << LEDC_DUTY_RES)) // Ciclo de trabajo aprox. 10% para pulsos nítidos sin sobrecargar el driver
 #define LEDC_MAX_FREQ 4000                     // Límite superior para proteger el motor y el A4988
 
 /**
