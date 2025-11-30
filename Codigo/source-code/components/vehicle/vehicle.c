@@ -20,7 +20,7 @@ static const char *TAG = "VEHICLE";
 struct vehicle_handle_s
 {
     a4988_dual_handle_t stepper_handle;
-    brushless_config_t brushless_cfg; // Guardamos copia de la config para usarla luego
+    brushless_config_t brushless_cfg;
 
     float current_rpm;
     a4988_dual_direction_t current_direction;

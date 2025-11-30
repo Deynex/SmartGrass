@@ -22,9 +22,9 @@ static const char *TAG = "A4988";
  * el A4988. La frecuencia máxima protege tanto al motor como al driver.
  */
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES LEDC_TIMER_13_BIT // Resolución de 13 bits que ofrece un duty suficientemente fino
-#define LEDC_DUTY 700                   // Ciclo de trabajo aprox. 8.5% para pulsos nítidos sin sobrecargar el driver
-#define LEDC_MAX_FREQ 4000              // Límite superior para proteger el motor y el A4988
+#define LEDC_DUTY_RES LEDC_TIMER_13_BIT        // Resolución de 13 bits que ofrece un duty suficientemente fino
+#define LEDC_DUTY (0.1 * (1 << LEDC_DUTY_RES)) // Ciclo de trabajo aprox. 8.5% para pulsos nítidos sin sobrecargar el driver
+#define LEDC_MAX_FREQ 4000                     // Límite superior para proteger el motor y el A4988
 
 /**
  * @brief Dirección del motor
@@ -42,16 +42,16 @@ typedef enum
  */
 struct a4988_dual_handle_s
 {
-    gpio_num_t step_pin;         // Pin STEP común que distribuye los pulsos a ambos lados
-    gpio_num_t dir_left_pin;     // Pin DIR para motores del lado izquierdo
-    gpio_num_t dir_right_pin;    // Pin DIR para motores del lado derecho
-    gpio_num_t enable_pin;       // Pin ENABLE compartido (-1 indica que no se cablea)
-    uint32_t steps_per_rev;      // Pasos eléctricos por vuelta considerando microstepping
-    ledc_timer_t timer_num;      // Timer LEDC a utilizar para producir los flancos de STEP
-    ledc_channel_t channel_num;  // Canal LEDC asociado al pin STEP
-    uint32_t current_frequency;  // Frecuencia actual programada en Hz
-    bool enabled;                // Estado lógico del pin ENABLE
-    volatile bool running;       // Flag para indicar si el PWM está activo de forma continua
+    gpio_num_t step_pin;        // Pin STEP común que distribuye los pulsos a ambos lados
+    gpio_num_t dir_left_pin;    // Pin DIR para motores del lado izquierdo
+    gpio_num_t dir_right_pin;   // Pin DIR para motores del lado derecho
+    gpio_num_t enable_pin;      // Pin ENABLE compartido (-1 indica que no se cablea)
+    uint32_t steps_per_rev;     // Pasos eléctricos por vuelta considerando microstepping
+    ledc_timer_t timer_num;     // Timer LEDC a utilizar para producir los flancos de STEP
+    ledc_channel_t channel_num; // Canal LEDC asociado al pin STEP
+    uint32_t current_frequency; // Frecuencia actual programada en Hz
+    bool enabled;               // Estado lógico del pin ENABLE
+    volatile bool running;      // Flag para indicar si el PWM está activo de forma continua
 };
 
 // --- Implementación de Funciones Públicas ---
@@ -91,7 +91,7 @@ esp_err_t a4988_dual_init(const a4988_dual_config_t *config, a4988_dual_handle_t
         .timer_num = new_handle->timer_num,
         .duty_resolution = LEDC_DUTY_RES,
         .freq_hz = 100, // Frecuencia inicial
-        .clk_cfg = LEDC_AUTO_CLK,
+        .clk_cfg = LEDC_USE_APB_CLK,
     };
     esp_err_t ret = ledc_timer_config(&ledc_timer);
     if (ret != ESP_OK)
@@ -232,7 +232,7 @@ esp_err_t a4988_dual_set_speed(a4988_dual_handle_t handle, float rpm)
     esp_err_t ret = ledc_set_freq(LEDC_MODE, handle->timer_num, (uint32_t)frequency_hz);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Error al establecer frecuencia");
+        ESP_LOGE(TAG, "Error al establecer frecuencia %.2f Hz", frequency_hz);
         return ret;
     }
 
