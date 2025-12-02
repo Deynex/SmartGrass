@@ -316,11 +316,11 @@ static void wifi_ap_start(void)
         },
     };
 
-    /* Si no hay contraseña, usa modo abierto (no recomendado para producción) */
+    /* Si no hay contraseña, usa modo abierto */
     if (strlen(ESP_WIFI_PASS) == 0)
     {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-        ESP_LOGW(TAG, "Modo abierto activado (sin contraseña). ¡No recomendado para producción!");
+        ESP_LOGW(TAG, "Modo abierto activado (sin contraseña)");
     }
 
     /* Aplica la configuración al driver WiFi */
@@ -340,8 +340,6 @@ static void wifi_ap_start(void)
 
 esp_err_t nvs_init(void)
 {
-    ESP_LOGI(TAG, "Inicializando NVS (Non-Volatile Storage)...");
-
     /* Intenta inicializar el NVS */
     esp_err_t err = nvs_flash_init();
 
@@ -365,15 +363,11 @@ esp_err_t nvs_init(void)
         ESP_LOGE(TAG, "Error al inicializar NVS: %s", esp_err_to_name(err));
         return err;
     }
-
-    ESP_LOGI(TAG, "NVS inicializado correctamente");
     return ESP_OK;
 }
 
 esp_err_t wifi_init(void)
 {
-    ESP_LOGI(TAG, "Iniciando WiFi en modo SoftAP...");
-
     /* ------------------------------------------------------------------
      * 1. Inicializar el stack TCP/IP (LwIP)
      * ------------------------------------------------------------------ */
@@ -453,15 +447,11 @@ esp_err_t wifi_init(void)
         ESP_LOGE(TAG, "Error al arrancar WiFi: %s", esp_err_to_name(ret));
         return ret;
     }
-
-    ESP_LOGI(TAG, "WiFi SoftAP iniciado correctamente");
     return ESP_OK;
 }
 
 esp_err_t wifi_stop(void)
 {
-    ESP_LOGI(TAG, "Deteniendo WiFi...");
-
     esp_err_t ret = esp_wifi_stop();
     if (ret != ESP_OK)
     {
@@ -470,7 +460,6 @@ esp_err_t wifi_stop(void)
     }
 
     s_connected_stations = 0;
-    ESP_LOGI(TAG, "WiFi detenido correctamente");
     return ESP_OK;
 }
 

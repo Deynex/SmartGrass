@@ -8,14 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h" // Para vTaskDelay, utilizado para crear delays en tareas FreeRTOS
+#include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_err.h"
-#include "driver/ledc.h" // Necesario para la implementación de PWM
+#include "driver/ledc.h"
 
 static const char *TAG = "A4988";
 
-// --- Constantes de Implementación Privada ---
 /*
  * Configuración PWM: se usa modo low speed para evitar interferencias con otros
  * periféricos y se fija un duty reducido que genere pulsos nítidos sin saturar
@@ -290,7 +289,7 @@ esp_err_t a4988_dual_move(a4988_dual_handle_t handle, a4988_dual_direction_t dir
         break;
 
     default:
-        ESP_LOGE(TAG, "Dirección inválida");
+        ESP_LOGW(TAG, "Dirección inválida");
         return ESP_ERR_INVALID_ARG;
     }
 

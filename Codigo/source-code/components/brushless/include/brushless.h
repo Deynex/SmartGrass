@@ -45,6 +45,7 @@ void brushless_arm(const brushless_config_t *config);
  * @brief Establece la potencia del motor en porcentaje (0.0 a 100.0)
  * @param config Puntero a la estructura de configuración
  * @param percentage Valor flotante de 0.0 a 100.0
+ * @note El motor empieza a girar aproximadamente desde el 11%
  * @return ESP_OK si el valor es válido
  */
 esp_err_t brushless_set_throttle(const brushless_config_t *config, float percentage);

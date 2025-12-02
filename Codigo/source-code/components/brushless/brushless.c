@@ -49,8 +49,6 @@ esp_err_t brushless_init(const brushless_config_t *config)
         .deconfigure = false,
     };
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-
-    ESP_LOGI(TAG, "Hardware PWM inicializado en GPIO %d", config->gpio_num);
     return ESP_OK;
 }
 
@@ -74,16 +72,12 @@ esp_err_t brushless_set_pulse_width(const brushless_config_t *config, uint32_t w
 
 void brushless_arm(const brushless_config_t *config)
 {
-    ESP_LOGW(TAG, "Iniciando secuencia de ARMADO...");
-
     // Paso crítico: Enviar señal de 0% (1000us)
     brushless_set_pulse_width(config, ESC_MIN_PULSE_US);
 
     // Esperar a que el ESC arranque y haga los pitidos de conteo de celdas
     // Según informe: 'Beep-Beep' para indicar detección de batería LiPo
     vTaskDelay(pdMS_TO_TICKS(ESC_ARM_DELAY_MS));
-
-    ESP_LOGI(TAG, "Motor ARMADO y listo para operar.");
 }
 
 esp_err_t brushless_set_throttle(const brushless_config_t *config, float percentage)

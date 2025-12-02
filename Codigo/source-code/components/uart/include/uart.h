@@ -8,6 +8,7 @@
  * 
  * @note Utiliza UART_NUM_1 del ESP32 con los pines GPIO 16 (RX) y GPIO 17 (TX)
  * @note Velocidad de comunicación configurada a 115200 baudios
+ * @author DEYNEX
  */
 
 #ifndef UART_H

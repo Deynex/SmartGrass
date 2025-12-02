@@ -1,7 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
-#include "vehicle.h" // Incluimos para el tipo vehicle_handle_t
+#include "vehicle.h"
 
 /**
  * @brief Inicializa el servidor HTTP y los handlers de WebSocket.
