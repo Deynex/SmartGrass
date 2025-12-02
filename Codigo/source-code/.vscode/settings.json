@@ -20,6 +20,6 @@
     "esp_log.h": "c",
     "esp_err.h": "c"
   },
-  "idf.portWin": "COM5",
+  "idf.portWin": "COM3",
   "idf.flashType": "UART"
 }
