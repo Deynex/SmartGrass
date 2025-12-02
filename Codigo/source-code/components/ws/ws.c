@@ -1,17 +1,20 @@
-/* ========================================================================
- * Archivo: ws.c
- * Descripción: Implementación del servidor WebSocket.
- * ======================================================================== */
+/**
+ * @file ws.c
+ * @brief Implementación del servidor WebSocket.
+ * @author DEYNEX
+ */
 
 #include "ws.h"
 #include <esp_log.h>
 #include <string.h>
-#include "a4988.h" // Para los enums A4988_DUAL_...
+#include "a4988.h"
 #include "brushless.h"
 
 static const char *TAG = "WEBSOCKET";
 
-// --- Definiciones de Protocolo (Cliente -> ESP32) ---
+// ==========================================================================================================================================================
+// MARK: Definiciones
+// ==========================================================================================================================================================
 #define CMD_STOP 0x00
 #define CMD_FORWARD 0x01
 #define CMD_BACKWARD 0x02
@@ -19,11 +22,15 @@ static const char *TAG = "WEBSOCKET";
 #define CMD_RIGHT 0x04
 #define CMD_BLADE_ON 0x05
 #define CMD_BLADE_OFF 0x06
+#define CMD_ENABLE 0x07
+#define CMD_DISABLE 0x08
 
 #define VEHICLE_CONTROL_SPEED 50.0f
 #define BLADE_CUT_SPEED 30.0f // 30% Potencia para corte estándar
 
-// --- Gestión de Clientes ---
+// ==========================================================================================================================================================
+// MARK: Gestión de Clientes
+// ==========================================================================================================================================================
 #define MAX_CLIENTS 5
 
 typedef struct
@@ -83,7 +90,9 @@ static void remove_client(int fd)
     }
 }
 
-// --- Lógica de Envío Asíncrono (Telemetría) ---
+// ==========================================================================================================================================================
+// MARK: Telelemetría
+// ==========================================================================================================================================================
 
 struct async_send_arg
 {
@@ -146,7 +155,9 @@ esp_err_t ws_server_send_text_all(const char *data)
     return ret;
 }
 
-// --- Handler Principal de WebSocket (Control) ---
+// =========================================================================================================================================================
+// MARK: Comandos de Control
+// =========================================================================================================================================================
 
 static void handle_control_command(uint8_t cmd)
 {
@@ -158,12 +169,15 @@ static void handle_control_command(uint8_t cmd)
     case CMD_FORWARD:
         vehicle_move(s_vehicle_handle, A4988_DUAL_FORWARD, VEHICLE_CONTROL_SPEED);
         break;
+
     case CMD_BACKWARD:
         vehicle_move(s_vehicle_handle, A4988_DUAL_BACKWARD, VEHICLE_CONTROL_SPEED);
         break;
+
     case CMD_LEFT:
         vehicle_move(s_vehicle_handle, A4988_DUAL_LEFT, VEHICLE_CONTROL_SPEED);
         break;
+
     case CMD_RIGHT:
         vehicle_move(s_vehicle_handle, A4988_DUAL_RIGHT, VEHICLE_CONTROL_SPEED);
         break;
@@ -180,6 +194,14 @@ static void handle_control_command(uint8_t cmd)
 
     case CMD_BLADE_OFF:
         vehicle_control_blade(s_vehicle_handle, 0.0f);
+        break;
+
+    case CMD_ENABLE:
+        vehicle_enable(s_vehicle_handle);
+        break;
+
+    case CMD_DISABLE:
+        vehicle_disable(s_vehicle_handle); // Esto corta torque y apaga cuchilla
         break;
     }
 }
@@ -256,7 +278,9 @@ static esp_err_t ws_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// --- Función de Registro de Handlers ---
+// =========================================================================================================================================================
+// MARK: Registro de Handlers
+// =========================================================================================================================================================
 
 esp_err_t ws_server_register_handlers(httpd_handle_t server, vehicle_handle_t vehicle)
 {

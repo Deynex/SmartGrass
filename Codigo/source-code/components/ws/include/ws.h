@@ -1,7 +1,9 @@
-/* ========================================================================
- * Archivo: ws.h
- * Descripción: API para el servidor WebSocket.
- * ======================================================================== */
+/**
+ * @file ws.h
+ * @brief API para el servidor WebSocket.
+ * @author DEYNEX
+ */
+
 #pragma once
 
 #include "esp_http_server.h"

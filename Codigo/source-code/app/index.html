@@ -20,22 +20,19 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background-color: #0d1117;
             color: #c9d1d9;
-            /* CAMBIO: Permitir scroll vertical y altura mínima */
             min-height: 100vh;
             padding: 10px;
-            overflow-x: hidden; /* Evitar scroll horizontal */
-            overflow-y: auto;   /* Permitir scroll vertical si no cabe */
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         .container {
             display: grid;
-            /* Por defecto (Desktop grande): 2 columnas */
             grid-template-columns: 1fr 1fr;
-            /* Altura automática para adaptarse al contenido */
             grid-template-rows: auto auto; 
             gap: 15px;
-            max-width: 1200px; /* Limitar ancho en pantallas muy grandes */
-            margin: 0 auto;    /* Centrar */
+            max-width: 1200px;
+            margin: 0 auto;
             padding-bottom: 20px;
         }
 
@@ -47,7 +44,6 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            /* Sombra suave para profundidad */
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
@@ -55,22 +51,16 @@
         .panel-bottom-left { grid-column: 1; grid-row: 2; }
         .panel-right { grid-column: 2; grid-row: 1 / 3; }
         
-        /* CAMBIO IMPORTANTÍSIMO: Breakpoint para Tablets y Móviles (aumentado a 1024px) */
         @media (max-width: 1024px) {
             body { padding: 5px; }
             .container {
-                /* Cambiar a una sola columna para que todo quepa bien */
                 grid-template-columns: 1fr; 
                 grid-template-rows: auto;
                 gap: 15px;
             }
-            
-            /* Reordenar paneles para flujo lógico en móvil/tablet */
-            .panel-top-left { grid-column: 1; grid-row: 1; } /* Telemetría primero */
-            .panel-right { grid-column: 1; grid-row: 2; }    /* Cuchilla segundo (Importante) */
-            .panel-bottom-left { grid-column: 1; grid-row: 3; } /* Control movimiento al final */
-            
-            /* Ajustar alturas mínimas para toque fácil */
+            .panel-top-left { grid-column: 1; grid-row: 1; }
+            .panel-right { grid-column: 1; grid-row: 2; min-height: 350px; }
+            .panel-bottom-left { grid-column: 1; grid-row: 3; }
             .control-pad { min-height: 200px; }
         }
 
@@ -86,7 +76,7 @@
             align-items: center;
         }
 
-        /* --- Telemetría Avanzada --- */
+        /* --- Telemetría --- */
         .telemetry-section {
             display: flex;
             flex-direction: column;
@@ -110,14 +100,14 @@
 
         .telemetry-rows {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Dos columnas de datos */
+            grid-template-columns: 1fr 1fr;
             gap: 5px 15px;
         }
 
         .telemetry-item {
             display: flex;
             justify-content: space-between;
-            font-size: 14px; /* Un poco más grande para legibilidad */
+            font-size: 14px;
         }
         
         .telemetry-item .label { color: #8b949e; }
@@ -130,7 +120,7 @@
             grid-template-rows: repeat(3, 1fr);
             gap: 10px;
             flex-grow: 1;
-            min-height: 180px; /* Más altura para dedos */
+            min-height: 180px;
         }
         .control-button {
             display: flex;
@@ -139,24 +129,47 @@
             background-color: #21262d;
             border: 1px solid #30363d;
             border-radius: 8px;
-            font-size: 28px; /* Iconos más grandes */
+            font-size: 28px;
             cursor: pointer;
-            transition: all 0.1s;
-            touch-action: manipulation; /* Mejor respuesta táctil */
+            transition: all 0.2s;
+            touch-action: manipulation;
         }
         .control-button:active { background-color: #58a6ff; color: #0d1117; transform: scale(0.95); }
         
         #btn-forward { grid-column: 2; grid-row: 1; }
         #btn-left { grid-column: 1; grid-row: 2; }
-        #btn-stop { 
-            grid-column: 2; grid-row: 2; 
-            background-color: #8b0000; border-color: #a11313; color: white;
-            font-size: 16px; font-weight: bold;
-        }
         #btn-right { grid-column: 3; grid-row: 2; }
         #btn-backward { grid-column: 2; grid-row: 3; }
 
-        /* --- Control de Cuchilla (Panel Derecho) --- */
+        /* Botón Power Central */
+        #btn-power { 
+            grid-column: 2; grid-row: 2; 
+            background-color: #21262d; 
+            border: 2px solid #8b949e;
+            color: #8b949e;
+            font-size: 20px; 
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        #btn-power span { font-size: 10px; text-transform: uppercase; }
+        
+        #btn-power.enabled {
+            background-color: #238636;
+            border-color: #2ea043;
+            color: white;
+            box-shadow: 0 0 10px rgba(46, 160, 67, 0.4);
+        }
+        
+        #btn-power.disabled {
+            background-color: #8b0000;
+            border-color: #a11313;
+            color: white;
+        }
+
+        /* --- Cuchilla --- */
         .blade-control {
             display: flex;
             flex-direction: column;
@@ -190,13 +203,11 @@
 
         .blade-button.active {
             border-color: #238636;
-            background: #2ea043; /* Verde activado */
+            background: #2ea043;
             color: white;
             box-shadow: 0 0 20px rgba(46, 160, 67, 0.4);
             animation: pulse 2s infinite;
         }
-
-        .blade-button i { font-size: 32px; margin-bottom: 5px; }
 
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -242,7 +253,6 @@
         <div class="panel panel-top-left">
             <div class="panel-title">Telemetría</div>
             <div class="telemetry-section">
-                
                 <!-- Grupo IMU -->
                 <div class="telemetry-group">
                     <h4>IMU (MPU6050)</h4>
@@ -257,7 +267,6 @@
                         <div class="telemetry-item"><span class="label">Roll:</span> <span class="value" id="roll">0</span>°</div>
                     </div>
                 </div>
-
                 <!-- Grupo Motor/Encoder -->
                 <div class="telemetry-group">
                     <h4>Tracción (MKS Servo)</h4>
@@ -270,16 +279,14 @@
                         <div class="telemetry-item"><span class="label">Current:</span> <span class="value" id="motor_current">0</span> mA</div>
                     </div>
                 </div>
-
                 <!-- Grupo Sistema -->
                 <div class="telemetry-group">
                     <h4>Sistema</h4>
                     <div class="telemetry-rows">
                         <div class="telemetry-item"><span class="label">Temp:</span> <span class="value" id="temp">0.0</span> °C</div>
-                        <div class="telemetry-item"><span class="label">Estado:</span> <span class="value" style="color:#238636">OK</span></div>
+                        <div class="telemetry-item"><span class="label">Estado:</span> <span class="value" id="sys-status" style="color:#238636">ON</span></div>
                     </div>
                 </div>
-
             </div>
         </div>
         
@@ -289,7 +296,13 @@
             <div class="control-pad">
                 <div class="control-button" id="btn-forward">▲</div>
                 <div class="control-button" id="btn-left">◀</div>
-                <div class="control-button" id="btn-stop">STOP</div>
+                
+                <!-- Botón Power Central -->
+                <div class="control-button enabled" id="btn-power">
+                    ⏻
+                    <span>ON</span>
+                </div>
+                
                 <div class="control-button" id="btn-right">▶</div>
                 <div class="control-button" id="btn-backward">▼</div>
             </div>
@@ -298,7 +311,6 @@
         <!-- Control Cuchilla -->
         <div class="panel panel-right">
             <div class="panel-title">Sistema de Corte</div>
-            
             <div class="blade-control">
                 <button id="btn-blade" class="blade-button">
                     <span style="font-size: 30px;">☢</span>
@@ -307,13 +319,11 @@
                 </button>
                 <div class="warning-text">¡PELIGRO! ALTA VELOCIDAD</div>
             </div>
-
             <div class="blade-info telemetry-group">
                 <h4>Estado Cuchilla</h4>
                 <div class="telemetry-item"><span class="label">Potencia:</span> <span class="value" id="blade-pwr">0%</span></div>
                 <div class="telemetry-item"><span class="label">Modo:</span> <span class="value">Manual</span></div>
             </div>
-
             <div class="status-bar">
                 <div class="status-light" id="status-light"></div>
                 <span id="status-text">Desconectado</span>
@@ -322,7 +332,7 @@
     </div>
 
 <script>
-    // Comandos Binarios (Protocolo)
+    // Comandos Binarios
     const CMD_STOP = 0x00;
     const CMD_FORWARD = 0x01;
     const CMD_BACKWARD = 0x02;
@@ -330,9 +340,12 @@
     const CMD_RIGHT = 0x04;
     const CMD_BLADE_ON = 0x05;
     const CMD_BLADE_OFF = 0x06;
+    const CMD_ENABLE = 0x07;
+    const CMD_DISABLE = 0x08;
 
     let socket;
     let bladeActive = false;
+    let motorsEnabled = true; // Asumimos habilitado al inicio (igual que main.c)
 
     // UI Elements
     const statusLight = document.getElementById('status-light');
@@ -340,8 +353,10 @@
     const btnBlade = document.getElementById('btn-blade');
     const bladeText = document.getElementById('blade-status-text');
     const bladePwr = document.getElementById('blade-pwr');
+    const btnPower = document.getElementById('btn-power');
+    const sysStatus = document.getElementById('sys-status');
 
-    // Mapeo de IDs de HTML a claves del JSON
+    // Mapeo UI
     const uiMap = {
         'accel_x': 'accel_x', 'accel_y': 'accel_y', 'accel_z': 'accel_z',
         'gyro_x': 'gyro_x', 'gyro_y': 'gyro_y', 'gyro_z': 'gyro_z',
@@ -372,18 +387,15 @@
         socket.onclose = () => {
             statusLight.classList.remove('connected');
             statusText.innerText = "Reconectando...";
-            // Seguridad: Asumir cuchilla apagada si se pierde conexión
             if (bladeActive) toggleBladeUI(false);
             setTimeout(connectWebSocket, 3000);
         };
     }
 
     function updateTelemetry(data) {
-        // Actualizar campos directos
         for (const [id, key] of Object.entries(uiMap)) {
             const el = document.getElementById(id);
             if (el && data[key] !== undefined) {
-                // Formateo especial para flotantes
                 if (typeof data[key] === 'number' && !Number.isInteger(data[key])) {
                     el.innerText = data[key].toFixed(1);
                 } else {
@@ -391,8 +403,6 @@
                 }
             }
         }
-        
-        // Calculo de Pitch/Roll (Aproximación con Acelerómetro)
         if(data.accel_z !== undefined) {
             let ax = data.accel_x, ay = data.accel_y, az = data.accel_z;
             let pitch = Math.atan2(ay, Math.sqrt(ax*ax + az*az)) * 57.29;
@@ -408,7 +418,7 @@
         }
     }
 
-    // --- Control Movimiento (Momentáneo) ---
+    // --- Control Movimiento ---
     const buttons = {
         'btn-forward': CMD_FORWARD, 'btn-backward': CMD_BACKWARD,
         'btn-left': CMD_LEFT, 'btn-right': CMD_RIGHT
@@ -416,28 +426,55 @@
 
     for (const [id, cmd] of Object.entries(buttons)) {
         const btn = document.getElementById(id);
-        // Inicio Movimiento
-        btn.addEventListener('mousedown', (e) => { e.preventDefault(); sendCommand(cmd); });
-        btn.addEventListener('touchstart', (e) => { e.preventDefault(); sendCommand(cmd); });
-        // Fin Movimiento
+        // Al presionar, si está habilitado, mover
+        btn.addEventListener('mousedown', (e) => { 
+            e.preventDefault(); 
+            if(motorsEnabled) sendCommand(cmd); 
+        });
+        btn.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            if(motorsEnabled) sendCommand(cmd); 
+        });
+        // Al soltar, STOP (frenado)
         btn.addEventListener('mouseup', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
         btn.addEventListener('touchend', (e) => { e.preventDefault(); sendCommand(CMD_STOP); });
     }
 
-    // Botón STOP (Detiene todo)
-    document.getElementById('btn-stop').addEventListener('click', () => {
-        sendCommand(CMD_STOP);
-        if (bladeActive) toggleBladeUI(false); 
-        sendCommand(CMD_BLADE_OFF);
+    // --- Control Power (Enable/Disable) ---
+    function togglePower() {
+        motorsEnabled = !motorsEnabled;
+        if (motorsEnabled) {
+            btnPower.classList.remove('disabled');
+            btnPower.classList.add('enabled');
+            btnPower.innerHTML = "⏻<span>ON</span>";
+            sysStatus.innerText = "ON";
+            sysStatus.style.color = "#238636";
+            sendCommand(CMD_ENABLE);
+        } else {
+            btnPower.classList.remove('enabled');
+            btnPower.classList.add('disabled');
+            btnPower.innerHTML = "⏻<span>OFF</span>";
+            sysStatus.innerText = "OFF";
+            sysStatus.style.color = "#a11313";
+            sendCommand(CMD_DISABLE);
+            
+            // Si deshabilitamos, también apagar cuchilla en UI
+            if (bladeActive) toggleBladeUI(false);
+        }
+    }
+
+    btnPower.addEventListener('click', (e) => {
+        e.preventDefault();
+        togglePower();
     });
 
-    // --- Control Cuchilla (Toggle) ---
+    // --- Control Cuchilla ---
     function toggleBladeUI(active) {
         bladeActive = active;
         if (bladeActive) {
             btnBlade.classList.add('active');
             bladeText.innerText = "ARMADO (ON)";
-            bladePwr.innerText = "30%"; // Valor hardcodeado en ws.c
+            bladePwr.innerText = "30%";
             bladePwr.style.color = "#2ea043";
         } else {
             btnBlade.classList.remove('active');
@@ -449,6 +486,11 @@
 
     btnBlade.addEventListener('click', (e) => {
         e.preventDefault();
+        // Solo permitir encender si los motores están habilitados
+        if (!bladeActive && !motorsEnabled) {
+            alert("Habilite el sistema (ON) antes de activar la cuchilla.");
+            return;
+        }
         const newState = !bladeActive;
         toggleBladeUI(newState);
         sendCommand(newState ? CMD_BLADE_ON : CMD_BLADE_OFF);
