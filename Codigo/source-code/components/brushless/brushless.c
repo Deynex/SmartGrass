@@ -77,7 +77,10 @@ void brushless_arm(const brushless_config_t *config)
 
     // Esperar a que el ESC arranque y haga los pitidos de conteo de celdas
     // Según informe: 'Beep-Beep' para indicar detección de batería LiPo
-    vTaskDelay(pdMS_TO_TICKS(ESC_ARM_DELAY_MS));
+    // NOTA: Dado a que esta funcion se llama por primera vez en app main, opera en el core 0
+    // pero el servidor se llama despues, igual en el core 0, por lo que cuando se active el brushless
+    // la telemetría dejara de funcionar temporalmente. Idealmente habría que hacer esto en otro core.
+    // vTaskDelay(pdMS_TO_TICKS(ESC_ARM_DELAY_MS));
 }
 
 esp_err_t brushless_set_throttle(const brushless_config_t *config, float percentage)

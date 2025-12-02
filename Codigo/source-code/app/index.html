@@ -299,7 +299,7 @@
                 
                 <!-- Botón Power Central -->
                 <div class="control-button enabled" id="btn-power">
-                    ⏻
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                     <span>ON</span>
                 </div>
                 
@@ -446,14 +446,14 @@
         if (motorsEnabled) {
             btnPower.classList.remove('disabled');
             btnPower.classList.add('enabled');
-            btnPower.innerHTML = "⏻<span>ON</span>";
+            btnPower.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg><span>ON</span>';
             sysStatus.innerText = "ON";
             sysStatus.style.color = "#238636";
             sendCommand(CMD_ENABLE);
         } else {
             btnPower.classList.remove('enabled');
             btnPower.classList.add('disabled');
-            btnPower.innerHTML = "⏻<span>OFF</span>";
+            btnPower.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg><span>OFF</span>';
             sysStatus.innerText = "OFF";
             sysStatus.style.color = "#a11313";
             sendCommand(CMD_DISABLE);
