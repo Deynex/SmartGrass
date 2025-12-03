@@ -25,7 +25,7 @@ static const char *TAG = "WEBSOCKET";
 #define CMD_ENABLE 0x07
 #define CMD_DISABLE 0x08
 
-#define VEHICLE_CONTROL_SPEED 50.0f
+#define VEHICLE_CONTROL_SPEED 100.0f
 #define BLADE_CUT_SPEED 30.0f // 30% Potencia para corte estándar
 
 // ==========================================================================================================================================================
@@ -183,7 +183,6 @@ static void handle_control_command(uint8_t cmd)
         break;
 
     case CMD_STOP:
-        // El comando STOP ahora detiene movimiento Y cuchilla (Seguridad)
         vehicle_stop(s_vehicle_handle);
         vehicle_control_blade(s_vehicle_handle, 0.0f);
         break;
