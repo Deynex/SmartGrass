@@ -13,7 +13,7 @@
 #define VEHICLE_ENABLE_PIN GPIO_NUM_18
 
 // Pines Cuchilla (Brushless)
-#define BLADE_GPIO_PIN GPIO_NUM_25 // Elegimos GPIO 25 para la señal ESC
+#define BLADE_GPIO_PIN GPIO_NUM_25 // La señal ESC
 
 // Configuración Hardware
 // Timer 0 para Ruedas (A4988), Timer 1 para Cuchilla (Brushless)
