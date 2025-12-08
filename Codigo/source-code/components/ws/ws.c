@@ -184,7 +184,6 @@ static void handle_control_command(uint8_t cmd)
 
     case CMD_STOP:
         vehicle_stop(s_vehicle_handle);
-        vehicle_control_blade(s_vehicle_handle, 0.0f);
         break;
 
     case CMD_BLADE_ON:
