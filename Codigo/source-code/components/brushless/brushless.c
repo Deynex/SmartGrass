@@ -9,8 +9,6 @@
 #include "freertos/task.h"
 #include <math.h>
 
-static const char *TAG = "BRUSHLESS";
-
 // Usamos 14 bits para tener buena resolución a 50Hz
 // Resolución: 2^14 = 16384 pasos totales en 20ms
 #define LEDC_DUTY_RES LEDC_TIMER_14_BIT
