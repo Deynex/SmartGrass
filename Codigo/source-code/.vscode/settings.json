@@ -21,5 +21,6 @@
     "esp_err.h": "c"
   },
   "idf.portWin": "COM3",
-  "idf.flashType": "UART"
+  "idf.flashType": "UART",
+  "idf.currentSetup": "c:\\Users\\infin\\.espressif\\esp-idf"
 }
