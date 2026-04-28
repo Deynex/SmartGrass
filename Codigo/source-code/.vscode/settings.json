@@ -1,26 +1,18 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.espIdfPath": "c:\\Users\\infin\\.espressif\\esp-idf",
-  "idf.espIdfPathWin": "c:\\Users\\infin\\.espressif\\esp-idf",
-  "idf.pythonInstallPath": "c:\\Users\\infin\\.espressif\\tools-idf\\tools\\idf-python\\3.11.2\\python.exe",
   "idf.openOcdConfigs": [
     "board/esp32-wrover-kit-3.3v.cfg"
   ],
-  "idf.toolsPathWin": "c:\\Users\\infin\\.espressif\\tools-idf",
+  "idf.currentSetup": "C:\\ESP\\v6.0\\esp-idf",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32"
   },
-  "clangd.path": "c:\\Users\\infin\\.espressif\\tools-idf\\tools\\esp-clang\\esp-19.1.2_20250312\\esp-clang\\bin\\clangd.exe",
+  "clangd.path": "C:\\Espressif\\tools\\esp-clang\\esp-20.1.1_20250829\\esp-clang\\bin\\clangd.exe",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=c:\\Users\\infin\\.espressif\\tools-idf\\tools\\xtensa-esp-elf\\esp-15.2.0_20250920\\xtensa-esp-elf\\bin\\xtensa-esp32-elf-gcc.exe",
-    "--compile-commands-dir=${workspaceFolder}\\build"
+    "--query-driver=**",
+    "--compile-commands-dir=c:\\Users\\infin\\OneDrive\\Escritorio\\Proyectos\\blink\\build"
   ],
-  "files.associations": {
-    "esp_log.h": "c",
-    "esp_err.h": "c"
-  },
-  "idf.portWin": "COM3",
   "idf.flashType": "UART",
-  "idf.currentSetup": "c:\\Users\\infin\\.espressif\\esp-idf"
+  "idf.portWin": "COM3"
 }
